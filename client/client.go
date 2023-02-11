@@ -15,6 +15,7 @@ type GoSynClient struct {
 	c          *http.Client
 }
 
+// TODO add test to clients
 func (gc GoSynClient) GetDirList(dirPath string) ([]handlers.DirChild, error) {
 	res, err := gc.c.Get(gc.BaseAPIURL + "/api/dirs/list/" + dirPath)
 	if err != nil {

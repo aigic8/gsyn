@@ -10,10 +10,13 @@ import (
 type SpaceHandler struct {
 	Spaces map[string]string
 }
+type (
+	SpaceGetAllResp = utils.APIResponse[SpaceGetAllRespData]
 
-type GetAllRespData struct {
-	Spaces []string `json:"spaces"`
-}
+	SpaceGetAllRespData struct {
+		Spaces []string `json:"spaces"`
+	}
+)
 
 func (h SpaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	spaces := make([]string, 0, len(h.Spaces))
@@ -21,7 +24,7 @@ func (h SpaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		spaces = append(spaces, space)
 	}
 
-	res := utils.APIResponse[GetAllRespData]{OK: true, Data: &GetAllRespData{Spaces: spaces}}
+	res := utils.APIResponse[SpaceGetAllRespData]{OK: true, Data: &SpaceGetAllRespData{Spaces: spaces}}
 	resBytes, err := json.Marshal(&res)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")

@@ -50,13 +50,13 @@ func TestSpaceGetAll(t *testing.T) {
 				panic(err)
 			}
 
-			var resData utils.APIResponse[GetAllRespData]
+			var resData utils.APIResponse[SpaceGetAllRespData]
 			if err := json.Unmarshal(resBody, &resData); err != nil {
 				panic(err)
 			}
 
 			assert.Equal(t, resData.OK, true)
-			assert.Equal(t, resData.Data.Spaces, tc.Spaces)
+			assert.ElementsMatch(t, resData.Data.Spaces, tc.Spaces)
 		})
 	}
 

@@ -19,7 +19,7 @@ type getDirListTestCase struct {
 	Name   string
 	Status int
 	Path   string
-	Resp   dirGetListRespData
+	Resp   DirGetListRespData
 }
 
 func TestDirGetList(t *testing.T) {
@@ -40,8 +40,8 @@ func TestDirGetList(t *testing.T) {
 		panic(err)
 	}
 
-	normalResp := dirGetListRespData{
-		Children: []dirChild{
+	normalResp := DirGetListRespData{
+		Children: []DirChild{
 			{Name: "special", IsDir: true},
 			{Name: "truth.txt", IsDir: false},
 		},
@@ -83,7 +83,7 @@ func TestDirGetList(t *testing.T) {
 
 			t.Log(string(resBody))
 
-			var resData utils.APIResponse[dirGetListRespData]
+			var resData utils.APIResponse[DirGetListRespData]
 			if err = json.Unmarshal(resBody, &resData); err != nil {
 				panic(err)
 			}
@@ -176,7 +176,7 @@ func TestDirGetTree(t *testing.T) {
 			panic(err)
 		}
 
-		var resData utils.APIResponse[dirGetTreeRespData]
+		var resData utils.APIResponse[DirGetTreeRespData]
 		if err = json.Unmarshal(resBody, &resData); err != nil {
 			panic(err)
 		}

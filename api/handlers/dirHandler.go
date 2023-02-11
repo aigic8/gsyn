@@ -18,18 +18,22 @@ type DirHandler struct {
 }
 
 type (
-	dirGetListRespData struct {
-		Children []dirChild `json:"children"`
+	DirGetListResp = utils.APIResponse[DirGetListRespData]
+
+	DirGetListRespData struct {
+		Children []DirChild `json:"children"`
 	}
 
-	dirChild struct {
+	DirChild struct {
 		Name  string `json:"name"`
 		IsDir bool   `json:"isDir"`
 	}
 )
 
 type (
-	dirGetTreeRespData struct {
+	DirGetTreeResp = utils.APIResponse[DirGetTreeRespData]
+
+	DirGetTreeRespData struct {
 		Tree utils.Tree `json:"tree"`
 	}
 )
@@ -68,14 +72,14 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	children := make([]dirChild, 0, len(rawChildren))
+	children := make([]DirChild, 0, len(rawChildren))
 	for _, child := range rawChildren {
-		children = append(children, dirChild{Name: child.Name(), IsDir: child.IsDir()})
+		children = append(children, DirChild{Name: child.Name(), IsDir: child.IsDir()})
 	}
 
-	res := utils.APIResponse[dirGetListRespData]{
+	res := utils.APIResponse[DirGetListRespData]{
 		OK:   true,
-		Data: &dirGetListRespData{Children: children},
+		Data: &DirGetListRespData{Children: children},
 	}
 
 	resBytes, err := json.Marshal(&res)
@@ -128,9 +132,9 @@ func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 
 	utils.FillTree(base, t)
 
-	res := utils.APIResponse[dirGetTreeRespData]{
+	res := utils.APIResponse[DirGetTreeRespData]{
 		OK:   true,
-		Data: &dirGetTreeRespData{Tree: t},
+		Data: &DirGetTreeRespData{Tree: t},
 	}
 
 	resBytes, err := json.Marshal(&res)

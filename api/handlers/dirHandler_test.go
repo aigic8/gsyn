@@ -47,6 +47,10 @@ func TestDirGetList(t *testing.T) {
 		},
 	}
 
+	// TODO add test caeses:
+	// - path is a file
+	// - path does not exist
+	// - path is out of space
 	testCases := []getDirListTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Resp: normalResp},
 	}
@@ -139,6 +143,10 @@ func TestDirGetTree(t *testing.T) {
 		},
 	}
 
+	// TODO add test caeses:
+	// - path is a file
+	// - path does not exist
+	// - path is out of space
 	testCases := []getDirTreeTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Tree: normalTree},
 	}

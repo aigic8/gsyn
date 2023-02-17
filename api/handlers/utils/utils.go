@@ -49,18 +49,18 @@ func FillTree(base string, tree map[string]TreeItem) error {
 	return nil
 }
 
-func SpacePathToNormalPath(rawPath string, spaces map[string]string) (string, error) {
+func SpacePathToNormalPath(rawPath string, spaces map[string]string) (string, string, error) {
 	spaceName, filePath, err := SplitSpaceAndPath(rawPath)
 	if err != nil {
-		return "", fmt.Errorf("bad path: %v", err)
+		return "", "", fmt.Errorf("bad path: %v", err)
 	}
 
 	spacePath, ok := spaces[spaceName]
 	if !ok {
-		return "", errors.New("space does not exist")
+		return "", "", errors.New("space does not exist")
 	}
 
-	return path.Join(spacePath, filePath), nil
+	return path.Join(spacePath, filePath), spaceName, nil
 }
 
 // Splits space name and path in the space. Only works if the string is trimmed

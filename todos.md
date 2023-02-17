@@ -3,3 +3,9 @@
 - [ ] use `protobuf` instead of `json` in API
 - [x] extract api utility functions to seperate package
 - [ ] add helper functions to client with generics
+- [ ] support remote destinations
+- [ ] normalize local paths (make them absolute)
+- [ ] better logging
+- [ ] test cmd
+- [ ] use path validator in api server
+- [ ] find a way to resolve https MITM attacks with no domains

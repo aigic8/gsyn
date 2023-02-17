@@ -12,12 +12,12 @@ import (
 
 type GoSynClient struct {
 	BaseAPIURL string
-	c          *http.Client
+	C          *http.Client
 }
 
 // TODO add test to clients
 func (gc GoSynClient) GetDirList(dirPath string) ([]handlers.DirChild, error) {
-	res, err := gc.c.Get(gc.BaseAPIURL + "/api/dirs/list/" + dirPath)
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/dirs/list/" + dirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (gc GoSynClient) GetDirList(dirPath string) ([]handlers.DirChild, error) {
 }
 
 func (gc GoSynClient) GetDirTree(dirPath string) (hutils.Tree, error) {
-	res, err := gc.c.Get(gc.BaseAPIURL + "/api/dirs/tree/" + dirPath)
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/dirs/tree/" + dirPath)
 	if err != nil {
 		return hutils.Tree{}, err
 	}
@@ -66,7 +66,7 @@ func (gc GoSynClient) GetDirTree(dirPath string) (hutils.Tree, error) {
 }
 
 func (gc GoSynClient) GetFile(filePath string) (io.Reader, error) {
-	res, err := gc.c.Get(gc.BaseAPIURL + "/api/files/" + filePath)
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/" + filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (gc GoSynClient) PutNewFile(filePath string, isForced bool, reader io.Reade
 		req.Header.Set("x-force", "false")
 	}
 
-	res, err := gc.c.Do(req)
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return err
 	}
@@ -125,8 +125,28 @@ func (gc GoSynClient) PutNewFile(filePath string, isForced bool, reader io.Reade
 	return nil
 }
 
+func (gc GoSynClient) GetMatches(path string) ([]string, error) {
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/matches" + path)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var resData handlers.FileGetMatchResp
+	if err = json.Unmarshal(resBody, &resData); err != nil {
+		return nil, err
+	}
+
+	return resData.Data.Matches, nil
+}
+
 func (gc GoSynClient) GetAllSpaces() ([]string, error) {
-	res, err := gc.c.Get(gc.BaseAPIURL + "/api/spaces/all")
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/spaces/all")
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
@@ -18,6 +19,14 @@ type FileHandler struct {
 	Spaces map[string]string
 }
 
+type (
+	FileGetMatchResp = utils.APIResponse[FileGetMatchRespData]
+
+	FileGetMatchRespData struct {
+		Matches []string `json:"matches"`
+	}
+)
+
 func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
 	if rawPath == "" {
@@ -25,7 +34,7 @@ func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
 		return
@@ -64,7 +73,7 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
 		return
@@ -125,4 +134,55 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(resBytes)
+}
+
+// TODO test
+func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
+	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	if rawPath == "" {
+		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	pattern, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	matchedPaths, err := filepath.Glob(pattern)
+	if err != nil {
+		// as said in https://pkg.go.dev/path/filepath#Glob the only error is for malformed patterns
+		utils.WriteAPIErr(w, http.StatusBadRequest, "malformed pattern: "+err.Error())
+		return
+	}
+
+	matchedFiles := []string{}
+	for _, matchedPath := range matchedPaths {
+		stat, err := os.Stat(matchedPath)
+		// FIXME maybe only not return paths with error instead of returning internal server error?
+		if err != nil {
+			utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
+			return
+		}
+
+		normalPathPrefix := h.Spaces[spaceName]
+		if !stat.IsDir() {
+			newFile := path.Join(spaceName, strings.TrimPrefix(matchedPath, normalPathPrefix))
+			matchedFiles = append(matchedFiles, newFile)
+		}
+	}
+
+	resp := FileGetMatchResp{
+		OK:   true,
+		Data: &FileGetMatchRespData{Matches: matchedFiles},
+	}
+
+	respJson, err := json.Marshal(&resp)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
+		return
+	}
+
+	w.Write(respJson)
 }

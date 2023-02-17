@@ -45,7 +45,7 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dirPath, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	dirPath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
 		return
@@ -99,7 +99,7 @@ func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dirPath, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	dirPath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
 		return

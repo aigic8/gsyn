@@ -42,6 +42,11 @@ func main() {
 	arg.MustParse(&args)
 	// TODO
 	servers := map[string]string{}
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	if args.Cp != nil {
 		pathsLen := len(args.Cp.Paths)
@@ -52,7 +57,7 @@ func main() {
 
 		srcs := make([]DynamicPath, 0, pathsLen-1)
 		for _, rawPath := range args.Cp.Paths[:pathsLen-1] {
-			dPath, err := ParseDynamicPath(rawPath)
+			dPath, err := ParseDynamicPath(rawPath, cwd)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "malformed path: %v\n", err)
 				os.Exit(1)
@@ -62,7 +67,7 @@ func main() {
 		}
 
 		// TODO for now dest only can be local
-		dest, err := ParseDynamicPath(args.Cp.Paths[pathsLen-1])
+		dest, err := ParseDynamicPath(args.Cp.Paths[pathsLen-1], cwd)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "malformed path: %v\n", err)
 			os.Exit(1)
@@ -128,16 +133,21 @@ func main() {
 
 }
 
-func ParseDynamicPath(rawPath string) (DynamicPath, error) {
+func ParseDynamicPath(rawPath string, base string) (DynamicPath, error) {
 	pathParts := strings.Split(rawPath, ":")
 	pathPartsLen := len(pathParts)
 	if pathPartsLen > 2 {
 		return DynamicPath{}, errors.New("more than one collon")
 	}
+
 	if pathPartsLen == 1 {
+		localPath := pathParts[0]
+		if !strings.HasPrefix(localPath, "/") {
+			localPath = path.Join(base, rawPath)
+		}
 		return DynamicPath{
 			IsRemote: false,
-			Path:     pathParts[0],
+			Path:     localPath,
 		}, nil
 	}
 
@@ -180,7 +190,7 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 			baseAPIURL, serverExists := t.Servers[dPath.ServerName]
 			if !serverExists {
 				fmt.Fprintf(os.Stderr, "server with name '%s' does not exist", dPath.ServerName)
-				return
+				continue
 			}
 
 			gsync := client.GoSynClient{
@@ -191,7 +201,12 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 			matches, err := gsync.GetMatches(dPath.Path)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error getting matches for '%s': %s", dPath.Path, err.Error())
-				return
+				continue
+			}
+
+			if len(matches) == 0 {
+				fmt.Fprintf(os.Stderr, "no file matched path '%s'\n", dPath.Path)
+				continue
 			}
 
 			out <- &Match{
@@ -203,7 +218,7 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 			matches, err := filepath.Glob(dPath.Path)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "malformed pattern '%s': %s", dPath.Path, err.Error())
-				return
+				continue
 			}
 
 			fileMatches := []string{}
@@ -211,11 +226,17 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 				stat, err := os.Stat(match)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "error stating path '%s': %s", match, err.Error())
+					continue
 				}
 
 				if !stat.IsDir() {
 					fileMatches = append(fileMatches, match)
 				}
+			}
+
+			if len(fileMatches) == 0 {
+				fmt.Fprintf(os.Stderr, "no file '%s'\n", dPath.Path)
+				continue
 			}
 
 			out <- &Match{

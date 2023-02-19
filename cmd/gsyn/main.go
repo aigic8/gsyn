@@ -33,6 +33,7 @@ type (
 type DynamicPath struct {
 	IsRemote   bool
 	IsForce    bool
+	BaseAPIURL string
 	ServerName string
 	Path       string
 }
@@ -57,7 +58,7 @@ func main() {
 
 		srcs := make([]DynamicPath, 0, pathsLen-1)
 		for _, rawPath := range args.Cp.Paths[:pathsLen-1] {
-			dPath, err := ParseDynamicPath(rawPath, cwd)
+			dPath, err := ParseDynamicPath(rawPath, cwd, servers)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "malformed path: %v\n", err)
 				os.Exit(1)
@@ -67,7 +68,7 @@ func main() {
 		}
 
 		// TODO for now dest only can be local
-		dest, err := ParseDynamicPath(args.Cp.Paths[pathsLen-1], cwd)
+		dest, err := ParseDynamicPath(args.Cp.Paths[pathsLen-1], cwd, servers)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "malformed path: %v\n", err)
 			os.Exit(1)
@@ -102,10 +103,10 @@ func main() {
 			}
 		}
 
-		t := NewMassWriter(servers, time.Duration(args.Cp.Timeout)*time.Millisecond, &dest, destDirMode)
+		t := NewMassWriter(time.Duration(args.Cp.Timeout)*time.Millisecond, &dest, destDirMode)
 
 		srcsChan := make(chan *DynamicPath)
-		matchesChan := make(chan *Match)
+		matchesChan := make(chan *DynamicPath)
 
 		matchesWg := new(sync.WaitGroup)
 		matchesWg.Add(args.Cp.Workers)
@@ -133,7 +134,7 @@ func main() {
 
 }
 
-func ParseDynamicPath(rawPath string, base string) (DynamicPath, error) {
+func ParseDynamicPath(rawPath string, base string, servers map[string]string) (DynamicPath, error) {
 	pathParts := strings.Split(rawPath, ":")
 	pathPartsLen := len(pathParts)
 	if pathPartsLen > 2 {
@@ -152,23 +153,26 @@ func ParseDynamicPath(rawPath string, base string) (DynamicPath, error) {
 	}
 
 	// pathPartsLen == 2
+	baseAPIURL, serverExists := servers[pathParts[0]]
+	if !serverExists {
+		return DynamicPath{}, fmt.Errorf("server '%s' does not exist", pathParts[0])
+	}
 	return DynamicPath{
 		IsRemote:   true,
 		ServerName: pathParts[0],
+		BaseAPIURL: baseAPIURL,
 		Path:       pathParts[1],
 	}, nil
 }
 
 type MassWriter struct {
 	c       *http.Client
-	Servers map[string]string
 	Dest    *DynamicPath
 	DirMode bool
 }
 
-func NewMassWriter(servers map[string]string, timeout time.Duration, dest *DynamicPath, dirMode bool) *MassWriter {
+func NewMassWriter(timeout time.Duration, dest *DynamicPath, dirMode bool) *MassWriter {
 	return &MassWriter{
-		Servers: servers,
 		c: &http.Client{
 			Timeout: timeout,
 		},
@@ -183,18 +187,13 @@ type Match struct {
 	Matches    []string
 }
 
-func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, wg *sync.WaitGroup) {
+func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *DynamicPath, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for dPath := range dPaths {
 		if dPath.IsRemote {
-			baseAPIURL, serverExists := t.Servers[dPath.ServerName]
-			if !serverExists {
-				fmt.Fprintf(os.Stderr, "server with name '%s' does not exist", dPath.ServerName)
-				continue
-			}
 
 			gsync := client.GoSynClient{
-				BaseAPIURL: baseAPIURL,
+				BaseAPIURL: dPath.BaseAPIURL,
 				C:          t.c,
 			}
 
@@ -204,16 +203,21 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 				continue
 			}
 
-			if len(matches) == 0 {
+			if len(matches) == 0 && !isPatternLike(dPath.Path) {
 				fmt.Fprintf(os.Stderr, "no file matched path '%s'\n", dPath.Path)
 				continue
 			}
 
-			out <- &Match{
-				IsRemote:   true,
-				BaseAPIURL: baseAPIURL,
-				Matches:    matches,
+			for _, match := range matches {
+				out <- &DynamicPath{
+					IsRemote:   true,
+					IsForce:    dPath.IsForce,
+					ServerName: dPath.ServerName,
+					BaseAPIURL: dPath.BaseAPIURL,
+					Path:       match,
+				}
 			}
+
 		} else {
 			matches, err := filepath.Glob(dPath.Path)
 			if err != nil {
@@ -239,81 +243,79 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 				continue
 			}
 
-			out <- &Match{
-				IsRemote: false,
-				Matches:  fileMatches,
+			for _, match := range matches {
+				out <- &DynamicPath{
+					IsRemote: false,
+					IsForce:  dPath.IsForce,
+					Path:     match,
+				}
 			}
+
 		}
 	}
 
 }
 
-// TODO instead of each match having an array, it should have just one match
-// this way the work can better spread between workers
-func (t *MassWriter) WriteToDest(matches <-chan *Match, wg *sync.WaitGroup) {
+func (t *MassWriter) WriteToDest(srcs <-chan *DynamicPath, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for match := range matches {
-		if match.IsRemote {
+	for src := range srcs {
+		if src.IsRemote {
 			gsync := client.GoSynClient{
-				BaseAPIURL: match.BaseAPIURL,
+				BaseAPIURL: src.BaseAPIURL,
 				C:          t.c,
 			}
 
-			for _, filePath := range match.Matches {
-				reader, err := gsync.GetFile(filePath)
+			reader, err := gsync.GetFile(src.Path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error getting file '%s' from url '%s': %s\n", src.Path, gsync.BaseAPIURL, err.Error())
+				continue
+			}
+
+			if !t.Dest.IsRemote {
+				var destPath string
+				if t.DirMode {
+					destPath = path.Join(t.Dest.Path, path.Base(src.Path))
+				} else {
+					destPath = t.Dest.Path
+				}
+				writer, err := os.Create(destPath)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "error getting file '%s' from url '%s': %s\n", filePath, gsync.BaseAPIURL, err.Error())
+					fmt.Fprintf(os.Stderr, "error creating file '%s': %s\n", destPath, err.Error())
 					continue
 				}
 
-				if !t.Dest.IsRemote {
-					var destPath string
-					if t.DirMode {
-						destPath = path.Join(t.Dest.Path, path.Base(filePath))
-					} else {
-						destPath = t.Dest.Path
-					}
-					writer, err := os.Create(destPath)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "error creating file '%s': %s\n", destPath, err.Error())
-						continue
-					}
-
-					if _, err = io.Copy(writer, reader); err != nil {
-						fmt.Fprintf(os.Stderr, "error copying to '%s': %s\n", destPath, err.Error())
-						continue
-					}
+				if _, err = io.Copy(writer, reader); err != nil {
+					fmt.Fprintf(os.Stderr, "error copying to '%s': %s\n", destPath, err.Error())
+					continue
 				}
-
 			}
+
 		} else {
-			for _, filePath := range match.Matches {
-				reader, err := os.Open(filePath)
+			reader, err := os.Open(src.Path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error opening file '%s': %s\n", src.Path, err.Error())
+				continue
+			}
+
+			if !t.Dest.IsRemote {
+				var destPath string
+				if t.DirMode {
+					destPath = path.Join(t.Dest.Path, path.Base(src.Path))
+				} else {
+					destPath = t.Dest.Path
+				}
+				writer, err := os.Create(destPath)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "error opening file '%s': %s\n", filePath, err.Error())
+					fmt.Fprintf(os.Stderr, "error creating file '%s': %s\n", destPath, err.Error())
 					continue
 				}
 
-				if !t.Dest.IsRemote {
-					var destPath string
-					if t.DirMode {
-						destPath = path.Join(t.Dest.Path, path.Base(filePath))
-					} else {
-						destPath = t.Dest.Path
-					}
-					writer, err := os.Create(destPath)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "error creating file '%s': %s\n", destPath, err.Error())
-						continue
-					}
-
-					if _, err = io.Copy(writer, reader); err != nil {
-						fmt.Fprintf(os.Stderr, "error copying to '%s': %s\n", destPath, err.Error())
-						continue
-					}
+				if _, err = io.Copy(writer, reader); err != nil {
+					fmt.Fprintf(os.Stderr, "error copying to '%s': %s\n", destPath, err.Error())
+					continue
 				}
-
 			}
+
 		}
 
 	}

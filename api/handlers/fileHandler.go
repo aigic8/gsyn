@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,17 @@ type (
 
 	FileGetMatchRespData struct {
 		Matches []string `json:"matches"`
+	}
+)
+
+type (
+	FileGetStatResp = utils.APIResponse[FileGetStatRespData]
+
+	FileGetStatRespData struct {
+		Name    string    `json:"name"`
+		IsDir   bool      `json:"isDir"`
+		Size    int64     `json:"size"`
+		ModTime time.Time `json:"modTime"`
 	}
 )
 
@@ -136,7 +148,6 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 	w.Write(resBytes)
 }
 
-// TODO test
 func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
 	if rawPath == "" {
@@ -176,6 +187,50 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 	resp := FileGetMatchResp{
 		OK:   true,
 		Data: &FileGetMatchRespData{Matches: matchedFiles},
+	}
+
+	respJson, err := json.Marshal(&resp)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
+		return
+	}
+
+	w.Write(respJson)
+}
+
+// TODO stating works for dirs too... But the functionality is the same...
+// Should we create a new url like /paths/stat only for stats or accept this thing?
+func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
+	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	if rawPath == "" {
+		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	stat, err := os.Stat(filePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			utils.WriteAPIErr(w, http.StatusNotFound, err.Error())
+			return
+		}
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
+		return
+	}
+
+	resp := FileGetStatResp{
+		OK: true,
+		Data: &FileGetStatRespData{
+			Name:    stat.Name(),
+			IsDir:   stat.IsDir(),
+			ModTime: stat.ModTime(),
+			Size:    stat.Size(),
+		},
 	}
 
 	respJson, err := json.Marshal(&resp)

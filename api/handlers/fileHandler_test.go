@@ -212,3 +212,78 @@ func TestFileMatch(t *testing.T) {
 	}
 
 }
+
+type fileStatTestCase struct {
+	Name      string
+	Status    int
+	Path      string
+	StatName  string
+	StatIsDir bool
+}
+
+func TestFileStat(t *testing.T) {
+	base := t.TempDir()
+
+	err := handlerstest.MakeDirs(base, []string{
+		"space/pink-floyd",
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = handlerstest.MakeFiles(base, []handlerstest.FileInfo{
+		{Path: "space/pink-floyd/time.txt", Data: []byte("Plans that either come to naught or half a page of scribbled lines")},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO add test cases:
+	// - path is a dir
+	// - path does not exist
+	// - path is out of space
+	testCases := []fileStatTestCase{
+		{Name: "normal", Status: http.StatusOK, Path: "pink-floyd/time.txt", StatName: "time.txt", StatIsDir: false},
+	}
+
+	spaces := map[string]string{
+		"pink-floyd": path.Join(base, "space/pink-floyd"),
+	}
+	fileHandler := FileHandler{
+		Spaces: spaces,
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("path", tc.Path)
+			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			fileHandler.Stat(w, r)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, res.StatusCode, tc.Status)
+
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				panic(err)
+			}
+
+			var resData FileGetStatResp
+			if err = json.Unmarshal(resBody, &resData); err != nil {
+				panic(err)
+			}
+
+			assert.True(t, resData.OK)
+			assert.Equal(t, resData.Data.Name, tc.StatName)
+			assert.Equal(t, resData.Data.IsDir, tc.StatIsDir)
+			assert.NotEqual(t, resData.Data.Size, 0)
+		})
+	}
+
+}

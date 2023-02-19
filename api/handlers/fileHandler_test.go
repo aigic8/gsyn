@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -58,7 +59,7 @@ func TestFileGet(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			r := httptest.NewRequest("GET", "/{path}", nil)
+			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Path)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
@@ -133,4 +134,81 @@ func TestFilePutNew(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fileMatchTestCase struct {
+	Name    string
+	Status  int
+	Pattern string
+	Files   []string
+}
+
+func TestFileMatch(t *testing.T) {
+	base := t.TempDir()
+
+	err := handlerstest.MakeDirs(base, []string{"space/pink-floyd/special"})
+	if err != nil {
+		panic(err)
+	}
+
+	err = handlerstest.MakeFiles(base, []handlerstest.FileInfo{
+		{Path: "space/pink-floyd/wish-you-were-here.txt", Data: []byte("hi")},
+		{Path: "space/pink-floyd/time.txt", Data: []byte("hi")},
+		{Path: "space/pink-floyd/wish-you-were-here.mp4", Data: []byte("hi")},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO add test cases:
+	// - space does not eixst (maybe)
+	// - path does not exist
+	// - matches no file
+	// - matches some files and dirs (should ignore the dirs)
+	normalCaseFiles := []string{
+		"pink-floyd/wish-you-were-here.txt",
+		"pink-floyd/time.txt",
+	}
+	testCases := []fileMatchTestCase{
+		{Name: "normal", Status: http.StatusOK, Pattern: "pink-floyd/*.txt", Files: normalCaseFiles},
+	}
+
+	spaces := map[string]string{
+		"pink-floyd": path.Join(base, "space/pink-floyd"),
+	}
+	fileHandler := FileHandler{
+		Spaces: spaces,
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("path", tc.Pattern)
+			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			fileHandler.Match(w, r)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, res.StatusCode, tc.Status)
+
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				panic(err)
+			}
+
+			var resData FileGetMatchResp
+			if err = json.Unmarshal(resBody, &resData); err != nil {
+				panic(err)
+			}
+
+			assert.True(t, resData.OK)
+			assert.ElementsMatch(t, resData.Data.Matches, tc.Files)
+		})
+	}
+
 }

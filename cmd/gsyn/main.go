@@ -103,7 +103,7 @@ func main() {
 			}
 		}
 
-		t := NewMassWriter(time.Duration(args.Cp.Timeout)*time.Millisecond, &dest, destDirMode)
+		mw := NewMassWriter(time.Duration(args.Cp.Timeout)*time.Millisecond, &dest, destDirMode)
 
 		srcsChan := make(chan *DynamicPath)
 		matchesChan := make(chan *DynamicPath)
@@ -111,7 +111,7 @@ func main() {
 		matchesWg := new(sync.WaitGroup)
 		matchesWg.Add(args.Cp.Workers)
 		for i := 0; i < args.Cp.Workers; i++ {
-			go t.GetMatches(srcsChan, matchesChan, matchesWg)
+			go mw.GetMatches(srcsChan, matchesChan, matchesWg)
 		}
 
 		go func() {
@@ -126,7 +126,7 @@ func main() {
 		writesWg := new(sync.WaitGroup)
 		writesWg.Add(args.Cp.Workers)
 		for i := 0; i < args.Cp.Workers; i++ {
-			t.WriteToDest(matchesChan, writesWg)
+			mw.WriteToDest(matchesChan, writesWg)
 		}
 
 		writesWg.Wait()
@@ -187,14 +187,14 @@ type Match struct {
 	Matches    []string
 }
 
-func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *DynamicPath, wg *sync.WaitGroup) {
+func (mw *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *DynamicPath, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for dPath := range dPaths {
 		if dPath.IsRemote {
 
 			gsync := client.GoSynClient{
 				BaseAPIURL: dPath.BaseAPIURL,
-				C:          t.c,
+				C:          mw.c,
 			}
 
 			matches, err := gsync.GetMatches(dPath.Path)
@@ -256,13 +256,13 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *DynamicP
 
 }
 
-func (t *MassWriter) WriteToDest(srcs <-chan *DynamicPath, wg *sync.WaitGroup) {
+func (mw *MassWriter) WriteToDest(srcs <-chan *DynamicPath, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for src := range srcs {
 		if src.IsRemote {
 			gsync := client.GoSynClient{
 				BaseAPIURL: src.BaseAPIURL,
-				C:          t.c,
+				C:          mw.c,
 			}
 
 			reader, err := gsync.GetFile(src.Path)
@@ -271,12 +271,12 @@ func (t *MassWriter) WriteToDest(srcs <-chan *DynamicPath, wg *sync.WaitGroup) {
 				continue
 			}
 
-			if !t.Dest.IsRemote {
+			if !mw.Dest.IsRemote {
 				var destPath string
-				if t.DirMode {
-					destPath = path.Join(t.Dest.Path, path.Base(src.Path))
+				if mw.DirMode {
+					destPath = path.Join(mw.Dest.Path, path.Base(src.Path))
 				} else {
-					destPath = t.Dest.Path
+					destPath = mw.Dest.Path
 				}
 				writer, err := os.Create(destPath)
 				if err != nil {
@@ -297,12 +297,12 @@ func (t *MassWriter) WriteToDest(srcs <-chan *DynamicPath, wg *sync.WaitGroup) {
 				continue
 			}
 
-			if !t.Dest.IsRemote {
+			if !mw.Dest.IsRemote {
 				var destPath string
-				if t.DirMode {
-					destPath = path.Join(t.Dest.Path, path.Base(src.Path))
+				if mw.DirMode {
+					destPath = path.Join(mw.Dest.Path, path.Base(src.Path))
 				} else {
-					destPath = t.Dest.Path
+					destPath = mw.Dest.Path
 				}
 				writer, err := os.Create(destPath)
 				if err != nil {

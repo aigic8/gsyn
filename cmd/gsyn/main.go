@@ -234,8 +234,8 @@ func (t *MassWriter) GetMatches(dPaths <-chan *DynamicPath, out chan<- *Match, w
 				}
 			}
 
-			if len(fileMatches) == 0 {
-				fmt.Fprintf(os.Stderr, "no file '%s'\n", dPath.Path)
+			if len(fileMatches) == 0 && !isPatternLike(dPath.Path) {
+				fmt.Fprintf(os.Stderr, "no file or directory '%s'\n", dPath.Path)
 				continue
 			}
 
@@ -317,4 +317,8 @@ func (t *MassWriter) WriteToDest(matches <-chan *Match, wg *sync.WaitGroup) {
 		}
 
 	}
+}
+
+func isPatternLike(path string) bool {
+	return strings.ContainsRune(path, '?') || strings.ContainsRune(path, '*')
 }

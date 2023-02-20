@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -59,7 +58,7 @@ type StatInfo struct {
 	Size    int64
 }
 
-func (dPath *DynamicPath) Stat(c *http.Client) (*StatInfo, error) {
+func (dPath *DynamicPath) Stat(gc *client.GoSynClient) (*StatInfo, error) {
 	if !dPath.IsRemote {
 		stat, err := os.Stat(dPath.Path)
 		if err != nil {
@@ -74,8 +73,7 @@ func (dPath *DynamicPath) Stat(c *http.Client) (*StatInfo, error) {
 		}, nil
 	}
 
-	gsync := client.GoSynClient{BaseAPIURL: dPath.BaseAPIURL, C: c}
-	statInfo, err := gsync.GetStat(dPath.Path)
+	statInfo, err := gc.GetStat(dPath.BaseAPIURL, dPath.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +87,7 @@ func (dPath *DynamicPath) Stat(c *http.Client) (*StatInfo, error) {
 
 }
 
-func (dPath *DynamicPath) GetMatches(c *http.Client) ([]*DynamicPath, error) {
+func (dPath *DynamicPath) GetMatches(gc *client.GoSynClient) ([]*DynamicPath, error) {
 	if !dPath.IsRemote {
 		matches, err := filepath.Glob(dPath.Path)
 		if err != nil {
@@ -115,12 +113,7 @@ func (dPath *DynamicPath) GetMatches(c *http.Client) ([]*DynamicPath, error) {
 		return fileMatches, nil
 	}
 
-	gsync := client.GoSynClient{
-		BaseAPIURL: dPath.BaseAPIURL,
-		C:          c,
-	}
-
-	matchesStr, err := gsync.GetMatches(dPath.Path)
+	matchesStr, err := gc.GetMatches(dPath.BaseAPIURL, dPath.Path)
 	if err != nil {
 		return nil, fmt.Errorf("error getting matches for '%s': %w", dPath.Path, err)
 	}
@@ -141,20 +134,15 @@ func isPatternLike(path string) bool {
 	return strings.ContainsRune(path, '?') || strings.ContainsRune(path, '*')
 }
 
-func (dPath *DynamicPath) Reader(c *http.Client) (io.Reader, error) {
+func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.Reader, error) {
 	if !dPath.IsRemote {
 		return os.Open(dPath.Path)
 	}
 
-	gsync := client.GoSynClient{
-		BaseAPIURL: dPath.BaseAPIURL,
-		C:          c,
-	}
-
-	return gsync.GetFile(dPath.Path)
+	return gc.GetFile(dPath.BaseAPIURL, dPath.Path)
 }
 
-func (dPath *DynamicPath) Copy(c *http.Client, srcName string, force bool, reader io.Reader) error {
+func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.Reader) error {
 	if !dPath.IsRemote {
 		writeDest := dPath.Path
 		writeStat, err := os.Stat(dPath.Path)
@@ -165,7 +153,6 @@ func (dPath *DynamicPath) Copy(c *http.Client, srcName string, force bool, reade
 
 		if err == nil && writeStat.IsDir() {
 			writeDest = path.Join(dPath.Path, srcName)
-			fmt.Println(writeDest, srcName)
 			writeStat, err = os.Stat(writeDest)
 			destExist = !errors.Is(err, os.ErrNotExist)
 			if err != nil && destExist {
@@ -193,11 +180,6 @@ func (dPath *DynamicPath) Copy(c *http.Client, srcName string, force bool, reade
 		return nil
 	}
 
-	gsync := client.GoSynClient{
-		BaseAPIURL: dPath.BaseAPIURL,
-		C:          c,
-	}
-
 	// FIXME should be copy so that the path is a directory, the file will be added to dir as a file
-	return gsync.PutNewFile(dPath.Path, force, reader)
+	return gc.PutNewFile(dPath.BaseAPIURL, dPath.Path, force, reader)
 }

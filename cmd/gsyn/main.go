@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/aigic8/gosyn/api/client"
 	u "github.com/aigic8/gosyn/cmd/gsyn/utils"
 	"github.com/alexflint/go-arg"
 )
@@ -41,6 +42,7 @@ func CP(cpArgs *cpArgs) {
 		os.Exit(1)
 	}
 	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond}
+	gc := &client.GoSynClient{C: c}
 
 	// TODO
 	servers := map[string]string{}
@@ -70,7 +72,7 @@ func CP(cpArgs *cpArgs) {
 	// destDirMode is when we destinition MUST BE a directory to copy files to (when we have multiple sources or matches)
 	destDirMode := len(srcs) > 1
 	if destDirMode {
-		stat, err := dest.Stat(c)
+		stat, err := dest.Stat(gc)
 		if err != nil {
 			panic(err)
 		}
@@ -83,7 +85,7 @@ func CP(cpArgs *cpArgs) {
 	// FIXME make multithreaded
 	matches := []*u.DynamicPath{}
 	for _, src := range srcs {
-		srcMatches, err := src.GetMatches(c)
+		srcMatches, err := src.GetMatches(gc)
 		if err != nil {
 			panic(err)
 		}
@@ -98,7 +100,7 @@ func CP(cpArgs *cpArgs) {
 
 	if !destDirMode && matchesLen > 1 {
 		destDirMode = true
-		stat, err := dest.Stat(c)
+		stat, err := dest.Stat(gc)
 		if err != nil {
 			panic(err)
 		}
@@ -110,7 +112,7 @@ func CP(cpArgs *cpArgs) {
 
 	// FIXME multithreaded
 	for _, match := range matches {
-		reader, err := match.Reader(c)
+		reader, err := match.Reader(gc)
 		if err != nil {
 			panic(err)
 		}
@@ -120,7 +122,7 @@ func CP(cpArgs *cpArgs) {
 			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, BaseAPIURL: dest.BaseAPIURL, ServerName: dest.ServerName, Path: path.Join(dest.Path, path.Base(match.Path))}
 		}
 
-		if err = matchDest.Copy(c, path.Base(match.Path), cpArgs.Force, reader); err != nil {
+		if err = matchDest.Copy(gc, path.Base(match.Path), cpArgs.Force, reader); err != nil {
 			panic(err)
 		}
 	}

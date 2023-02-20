@@ -11,13 +11,12 @@ import (
 )
 
 type GoSynClient struct {
-	BaseAPIURL string
-	C          *http.Client
+	C *http.Client
 }
 
 // TODO add test to clients
-func (gc GoSynClient) GetDirList(dirPath string) ([]handlers.DirChild, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/dirs/list/" + dirPath)
+func (gc *GoSynClient) GetDirList(baseAPIURL string, dirPath string) ([]handlers.DirChild, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/dirs/list/" + dirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +39,8 @@ func (gc GoSynClient) GetDirList(dirPath string) ([]handlers.DirChild, error) {
 	return resData.Data.Children, nil
 }
 
-func (gc GoSynClient) GetDirTree(dirPath string) (hutils.Tree, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/dirs/tree/" + dirPath)
+func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (hutils.Tree, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/dirs/tree/" + dirPath)
 	if err != nil {
 		return hutils.Tree{}, err
 	}
@@ -65,8 +64,8 @@ func (gc GoSynClient) GetDirTree(dirPath string) (hutils.Tree, error) {
 	return resData.Data.Tree, nil
 }
 
-func (gc GoSynClient) GetFile(filePath string) (io.Reader, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/" + filePath)
+func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.Reader, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/files/" + filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +88,8 @@ func (gc GoSynClient) GetFile(filePath string) (io.Reader, error) {
 	return res.Body, nil
 }
 
-func (gc GoSynClient) PutNewFile(filePath string, isForced bool, reader io.Reader) error {
-	req, err := http.NewRequest(http.MethodPut, gc.BaseAPIURL+"/api/files/new", reader)
+func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath string, isForced bool, reader io.Reader) error {
+	req, err := http.NewRequest(http.MethodPut, baseAPIURL+"/api/files/new", reader)
 	if err != nil {
 		return err
 	}
@@ -125,8 +124,8 @@ func (gc GoSynClient) PutNewFile(filePath string, isForced bool, reader io.Reade
 	return nil
 }
 
-func (gc GoSynClient) GetMatches(path string) ([]string, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/matches" + path)
+func (gc *GoSynClient) GetMatches(baseAPIURL string, path string) ([]string, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/files/matches" + path)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +144,8 @@ func (gc GoSynClient) GetMatches(path string) ([]string, error) {
 	return resData.Data.Matches, nil
 }
 
-func (gc GoSynClient) GetAllSpaces() ([]string, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/spaces/all")
+func (gc *GoSynClient) GetAllSpaces(baseAPIURL string) ([]string, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/spaces/all")
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +169,8 @@ func (gc GoSynClient) GetAllSpaces() ([]string, error) {
 	return resData.Data.Spaces, nil
 }
 
-func (gc GoSynClient) GetStat(statPath string) (handlers.StatInfo, error) {
-	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/stat/" + statPath)
+func (gc *GoSynClient) GetStat(baseAPIURL string, statPath string) (handlers.StatInfo, error) {
+	res, err := gc.C.Get(baseAPIURL + "/api/files/stat/" + statPath)
 	if err != nil {
 		return handlers.StatInfo{}, err
 	}

@@ -280,9 +280,9 @@ func TestFileStat(t *testing.T) {
 			}
 
 			assert.True(t, resData.OK)
-			assert.Equal(t, resData.Data.Name, tc.StatName)
-			assert.Equal(t, resData.Data.IsDir, tc.StatIsDir)
-			assert.NotEqual(t, resData.Data.Size, 0)
+			assert.Equal(t, resData.Data.Stat.Name, tc.StatName)
+			assert.Equal(t, resData.Data.Stat.IsDir, tc.StatIsDir)
+			assert.NotEqual(t, resData.Data.Stat.Size, 0)
 		})
 	}
 

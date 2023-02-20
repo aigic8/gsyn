@@ -32,6 +32,10 @@ type (
 	FileGetStatResp = utils.APIResponse[FileGetStatRespData]
 
 	FileGetStatRespData struct {
+		Stat StatInfo `json:"stat"`
+	}
+
+	StatInfo struct {
 		Name    string    `json:"name"`
 		IsDir   bool      `json:"isDir"`
 		Size    int64     `json:"size"`
@@ -226,10 +230,12 @@ func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
 	resp := FileGetStatResp{
 		OK: true,
 		Data: &FileGetStatRespData{
-			Name:    stat.Name(),
-			IsDir:   stat.IsDir(),
-			ModTime: stat.ModTime(),
-			Size:    stat.Size(),
+			Stat: StatInfo{
+				Name:    stat.Name(),
+				IsDir:   stat.IsDir(),
+				ModTime: stat.ModTime(),
+				Size:    stat.Size(),
+			},
 		},
 	}
 

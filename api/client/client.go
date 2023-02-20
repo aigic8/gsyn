@@ -169,3 +169,29 @@ func (gc GoSynClient) GetAllSpaces() ([]string, error) {
 
 	return resData.Data.Spaces, nil
 }
+
+func (gc GoSynClient) GetStat(statPath string) (handlers.StatInfo, error) {
+	res, err := gc.C.Get(gc.BaseAPIURL + "/api/files/stat/" + statPath)
+	if err != nil {
+		return handlers.StatInfo{}, err
+	}
+
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return handlers.StatInfo{}, err
+	}
+
+	var resData handlers.FileGetStatResp
+	if err = json.Unmarshal(resBody, &resData); err != nil {
+		return handlers.StatInfo{}, err
+	}
+
+	if !resData.OK {
+		return handlers.StatInfo{}, errors.New("none-ok response: " + resData.Error)
+	}
+
+	return resData.Data.Stat, nil
+
+}

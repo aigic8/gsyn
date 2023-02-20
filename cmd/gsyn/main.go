@@ -10,6 +10,7 @@ import (
 	"github.com/aigic8/gosyn/api/client"
 	u "github.com/aigic8/gosyn/cmd/gsyn/utils"
 	"github.com/alexflint/go-arg"
+	"github.com/fatih/color"
 )
 
 type (
@@ -38,8 +39,7 @@ func main() {
 func CP(cpArgs *cpArgs) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		errOut(err.Error())
 	}
 	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond}
 	gc := &client.GoSynClient{C: c}
@@ -49,24 +49,21 @@ func CP(cpArgs *cpArgs) {
 
 	pathsLen := len(cpArgs.Paths)
 	if pathsLen < 2 {
-		fmt.Fprintln(os.Stderr, "need at least a source and destination path")
-		os.Exit(1)
+		errOut("need at least a source and destination path")
 	}
 
 	srcs := make([]*u.DynamicPath, 0, pathsLen-1)
 	for _, rawPath := range cpArgs.Paths[:pathsLen-1] {
 		dPath, err := u.NewDynamicPath(rawPath, cwd, servers)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "malformed path: %s\n", err.Error())
-			os.Exit(1)
+			errOut("malformed path: %s", err.Error())
 		}
 		srcs = append(srcs, dPath)
 	}
 
 	dest, err := u.NewDynamicPath(cpArgs.Paths[pathsLen-1], cwd, servers)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "malformed path: %s\n", err.Error())
-		os.Exit(1)
+		errOut("malformed path: %s", err.Error())
 	}
 
 	// destDirMode is when we destinition MUST BE a directory to copy files to (when we have multiple sources or matches)
@@ -74,11 +71,11 @@ func CP(cpArgs *cpArgs) {
 	if destDirMode {
 		stat, err := dest.Stat(gc)
 		if err != nil {
-			panic(err)
+			errOut(err.Error())
 		}
 
 		if !stat.IsDir {
-			panic("path '%s' is not a dir (multiple sources)")
+			errOut("path '%s' is not a dir (multiple sources)", dest.String())
 		}
 	}
 
@@ -87,14 +84,14 @@ func CP(cpArgs *cpArgs) {
 	for _, src := range srcs {
 		srcMatches, err := src.GetMatches(gc)
 		if err != nil {
-			panic(err)
+			errOut("getting match for '%s': %s", src.String(), err.Error())
 		}
 		matches = append(matches, srcMatches...)
 	}
 
 	matchesLen := len(matches)
 	if matchesLen == 0 {
-		fmt.Fprintln(os.Stderr, "no file matched the sources")
+		errOut("no file matched the sources")
 		return
 	}
 
@@ -102,11 +99,11 @@ func CP(cpArgs *cpArgs) {
 		destDirMode = true
 		stat, err := dest.Stat(gc)
 		if err != nil {
-			panic(err)
+			errOut("getting '%s' info: %s", dest.String(), err.Error())
 		}
 
 		if !stat.IsDir {
-			panic("path '%s' is not a dir (multiple sources)")
+			errOut("path '%s' is not a dir (multiple sources)", dest.Path)
 		}
 	}
 
@@ -114,7 +111,7 @@ func CP(cpArgs *cpArgs) {
 	for _, match := range matches {
 		reader, err := match.Reader(gc)
 		if err != nil {
-			panic(err)
+			errOut("getting reader for '%s': %s", match.String(), err)
 		}
 
 		matchDest := dest
@@ -123,8 +120,16 @@ func CP(cpArgs *cpArgs) {
 		}
 
 		if err = matchDest.Copy(gc, path.Base(match.Path), cpArgs.Force, reader); err != nil {
-			panic(err)
+			errOut("copying '%s' to '%s': %s", match.String(), matchDest.String(), err)
 		}
 	}
 
+}
+
+var errPrepend = color.New(color.FgRed).Sprint(" ERROR ")
+
+func errOut(format string, a ...any) {
+	fmt.Fprint(os.Stderr, errPrepend)
+	fmt.Fprintf(os.Stderr, format+"\n", a...)
+	os.Exit(1)
 }

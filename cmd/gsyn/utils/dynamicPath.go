@@ -183,3 +183,10 @@ func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force boo
 	// FIXME should be copy so that the path is a directory, the file will be added to dir as a file
 	return gc.PutNewFile(dPath.BaseAPIURL, dPath.Path, force, reader)
 }
+
+func (dPath *DynamicPath) String() string {
+	if dPath.IsRemote {
+		return dPath.ServerName + ":" + dPath.Path
+	}
+	return dPath.Path
+}

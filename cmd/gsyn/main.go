@@ -22,30 +22,41 @@ type (
 		Force   bool     `arg:"-f"`
 		Workers int      `arg:"-w,--workers"`
 		Paths   []string `arg:"positional"`
-		Timeout int      `arg:"-t,--timeout"`
+		Timeout int64    `arg:"-t,--timeout"`
 	}
 )
+
+const DEFAULT_TIMEOUT int64 = 5000
 
 func main() {
 	var args args
 	arg.MustParse(&args)
 
+	config, err := LoadConfig()
+	if err != nil {
+		errOut("loading configuration: %s", err.Error())
+	}
+
 	if args.Cp != nil {
-		CP(args.Cp)
+		if args.Cp.Timeout == 0 {
+			if config.DefaultTimeout != 0 {
+				args.Cp.Timeout = config.DefaultTimeout
+			} else {
+				args.Cp.Timeout = DEFAULT_TIMEOUT
+			}
+		}
+		CP(args.Cp, config.Servers)
 	}
 
 }
 
-func CP(cpArgs *cpArgs) {
+func CP(cpArgs *cpArgs, servers map[string]string) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		errOut(err.Error())
 	}
 	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond}
 	gc := &client.GoSynClient{C: c}
-
-	// TODO
-	servers := map[string]string{}
 
 	pathsLen := len(cpArgs.Paths)
 	if pathsLen < 2 {

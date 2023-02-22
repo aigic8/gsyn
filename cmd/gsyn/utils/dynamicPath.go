@@ -43,6 +43,10 @@ func NewDynamicPath(rawPath string, base string, servers map[string]string) (*Dy
 	if !serverExists {
 		return nil, fmt.Errorf("server '%s' does not exist", pathParts[0])
 	}
+
+	if pathParts[1] == "" {
+		return nil, fmt.Errorf("empty path")
+	}
 	return &DynamicPath{
 		IsRemote:   true,
 		ServerName: pathParts[0],

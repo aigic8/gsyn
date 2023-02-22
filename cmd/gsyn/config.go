@@ -9,13 +9,13 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/pelletier/go-toml/v2"
 )
 
-// FIXME add validation
 type Config struct {
-	Servers        map[string]string `toml:"servers"`
-	DefaultTimeout int64             `toml:"defaultTimeout"`
+	Servers        map[string]string `toml:"servers" validate:"required"`
+	DefaultTimeout int64             `toml:"defaultTimeout" validate:"gt=0"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -42,6 +42,11 @@ func LoadConfig() (*Config, error) {
 
 	var config Config
 	if err = toml.Unmarshal(configBytes, &config); err != nil {
+		return nil, err
+	}
+
+	validate := validator.New()
+	if err = validate.Struct(&config); err != nil {
 		return nil, err
 	}
 

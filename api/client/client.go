@@ -125,7 +125,7 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath string, isForced b
 }
 
 func (gc *GoSynClient) GetMatches(baseAPIURL string, path string) ([]string, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/files/matches" + path)
+	res, err := gc.C.Get(baseAPIURL + "/api/files/matches/" + path)
 	if err != nil {
 		return nil, err
 	}

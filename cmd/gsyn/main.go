@@ -38,14 +38,17 @@ func main() {
 	}
 
 	if args.Cp != nil {
+		if config.Client == nil {
+			errOut("no configuration found for client")
+		}
 		if args.Cp.Timeout == 0 {
-			if config.DefaultTimeout != 0 {
-				args.Cp.Timeout = config.DefaultTimeout
+			if config.Client.DefaultTimeout != 0 {
+				args.Cp.Timeout = config.Client.DefaultTimeout
 			} else {
 				args.Cp.Timeout = DEFAULT_TIMEOUT
 			}
 		}
-		CP(args.Cp, config.Servers)
+		CP(args.Cp, config.Client.Servers)
 	}
 
 }

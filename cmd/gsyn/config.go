@@ -13,10 +13,27 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-type Config struct {
-	Servers        map[string]string `toml:"servers" validate:"required"`
-	DefaultTimeout int64             `toml:"defaultTimeout" validate:"gt=0"`
-}
+type (
+	Config struct {
+		Client *ClientConfig `toml:"client,omitempty"`
+		Server *ServerConfig `toml:"server,omitempty"`
+	}
+
+	ClientConfig struct {
+		Servers        map[string]string `toml:"servers" validate:"required"`
+		DefaultTimeout int64             `toml:"defaultTimeout" validate:"gt=0"`
+	}
+
+	ServerConfig struct {
+		Spaces map[string]string `toml:"spaces" validate:"required"`
+		Users  []ServerUser      `toml:"users"`
+	}
+
+	ServerUser struct {
+		GUID   string   `toml:"GUID" validate:"required,uuid4"`
+		Spaces []string `toml:"spaces"`
+	}
+)
 
 func LoadConfig() (*Config, error) {
 	configPaths, err := getConfigPaths()

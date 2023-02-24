@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aigic8/gosyn/api/handlers/handlerstest"
+	"github.com/aigic8/gosyn/api/handlers/utils"
 )
 
 type fileGetTestCase struct {
@@ -46,6 +47,7 @@ func TestFileGet(t *testing.T) {
 	// - file path is for a directory
 	// - file path is out of space
 	// - file does not exist
+	// - user is unauthorzied to access space
 	testCases := []fileGetTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers/truth.txt", Data: seetherTruthData},
 	}
@@ -55,6 +57,7 @@ func TestFileGet(t *testing.T) {
 	}
 	fileHander := FileHandler{Spaces: spaces}
 
+	userSpaces := map[string]bool{"seethers": true}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
@@ -63,6 +66,13 @@ func TestFileGet(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Path)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			fileHander.Get(w, r)
 
@@ -108,6 +118,7 @@ func TestFilePutNew(t *testing.T) {
 	// - file does exist in normal mode
 	// - path of file is a directory
 	// - file path is out of space
+	// - user is unauthorzid to access space
 	// - [OPTIONAL] space does not exist
 	testCases := []filePutNewTestCase{
 		{Name: "normal", Status: http.StatusOK, NewFilePath: newFilePath, NewFileData: newFileData, RawFilePath: "space/pink-floyd/wish-you-were-here.txt"},
@@ -116,12 +127,20 @@ func TestFilePutNew(t *testing.T) {
 	spaces := map[string]string{"pink-floyd": path.Join(base, "space/pink-floyd")}
 	fileHanlder := FileHandler{Spaces: spaces}
 
+	userSpaces := map[string]bool{"pink-floyd": true}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			r := httptest.NewRequest(http.MethodPut, "/", bytes.NewReader(tc.NewFileData))
 			r.Header.Add("x-file-path", tc.NewFilePath)
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			fileHanlder.PutNew(w, r)
 
@@ -179,6 +198,7 @@ func TestFileMatch(t *testing.T) {
 	fileHandler := FileHandler{
 		Spaces: spaces,
 	}
+	userSpaces := map[string]bool{"pink-floyd": true}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
@@ -188,6 +208,13 @@ func TestFileMatch(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Pattern)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			fileHandler.Match(w, r)
 
@@ -242,6 +269,7 @@ func TestFileStat(t *testing.T) {
 	// - path is a dir
 	// - path does not exist
 	// - path is out of space
+	// - user is unauthorized to access space
 	testCases := []fileStatTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "pink-floyd/time.txt", StatName: "time.txt", StatIsDir: false},
 	}
@@ -253,6 +281,8 @@ func TestFileStat(t *testing.T) {
 		Spaces: spaces,
 	}
 
+	userSpaces := map[string]bool{"pink-floyd": true}
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
@@ -261,6 +291,13 @@ func TestFileStat(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Path)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			fileHandler.Stat(w, r)
 

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,40 @@ type (
 		Children map[string]TreeItem `json:"children"`
 	}
 )
+
+type RequestContextKey int
+
+const (
+	UserContextKey RequestContextKey = iota
+)
+
+type UserInfo struct {
+	GUID   string
+	Spaces map[string]bool
+}
+
+// TODO test
+func UserAuthMiddleware(users map[string]UserInfo) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			headerParts := strings.Split(authHeader, " ")
+			if len(headerParts) != 2 || headerParts[0] != "simple" {
+				WriteAPIErr(w, http.StatusUnauthorized, "bad authentication")
+				return
+			}
+
+			user, ok := users[headerParts[1]]
+			if !ok {
+				WriteAPIErr(w, http.StatusUnauthorized, "bad authentication")
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), UserContextKey, &user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
 
 func FillTree(base string, tree map[string]TreeItem) error {
 	for key, item := range tree {

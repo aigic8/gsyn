@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -19,25 +20,28 @@ type spaceGetAllTestCase struct {
 
 func TestSpaceGetAll(t *testing.T) {
 
-	spacesMap := map[string]string{
-		"spiderman": "home/spiderman",
-		"batman":    "home/projects/batman",
-	}
-
-	spacesArr := make([]string, 0, len(spacesMap))
-	for space := range spacesMap {
-		spacesArr = append(spacesArr, space)
+	userSpaces := map[string]bool{"spiderman": true, "batman": true}
+	spaces := make([]string, 0, len(userSpaces))
+	for space := range userSpaces {
+		spaces = append(spaces, space)
 	}
 
 	testCases := []spaceGetAllTestCase{
-		{Name: "normal", Status: http.StatusOK, Spaces: spacesArr},
+		{Name: "normal", Status: http.StatusOK, Spaces: spaces},
 	}
 
-	spaceHandler := SpaceHandler{Spaces: spacesMap}
+	spaceHandler := SpaceHandler{}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			spaceHandler.GetAll(w, r)
 

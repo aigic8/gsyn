@@ -51,6 +51,7 @@ func TestDirGetList(t *testing.T) {
 	// - path is a file
 	// - path does not exist
 	// - path is out of space
+	// - user is unauthorized
 	testCases := []getDirListTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Resp: normalResp},
 	}
@@ -60,6 +61,8 @@ func TestDirGetList(t *testing.T) {
 	}
 	dirHandler := DirHandler{Spaces: spaces}
 
+	userSpaces := map[string]bool{"seethers": true}
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
@@ -68,6 +71,13 @@ func TestDirGetList(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Path)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			uInfo := utils.UserInfo{
+				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+				Spaces: userSpaces,
+			}
+			ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+			r = r.WithContext(ctx)
 
 			dirHandler.GetList(w, r)
 
@@ -147,6 +157,7 @@ func TestDirGetTree(t *testing.T) {
 	// - path is a file
 	// - path does not exist
 	// - path is out of space
+	// - user is unauthorized
 	testCases := []getDirTreeTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Tree: normalTree},
 	}
@@ -156,6 +167,8 @@ func TestDirGetTree(t *testing.T) {
 	}
 	dirHandler := DirHandler{Spaces: spaces}
 
+	userSpaces := map[string]bool{"seethers": true}
+
 	for _, tc := range testCases {
 		w := httptest.NewRecorder()
 
@@ -163,6 +176,13 @@ func TestDirGetTree(t *testing.T) {
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("path", tc.Path)
 		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+		uInfo := utils.UserInfo{
+			GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
+			Spaces: userSpaces,
+		}
+		ctx := context.WithValue(r.Context(), utils.UserContextKey, &uInfo)
+		r = r.WithContext(ctx)
 
 		dirHandler.GetTree(w, r)
 

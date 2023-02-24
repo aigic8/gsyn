@@ -8,7 +8,6 @@ import (
 )
 
 type SpaceHandler struct {
-	Spaces map[string]string
 }
 type (
 	SpaceGetAllResp = utils.APIResponse[SpaceGetAllRespData]
@@ -19,8 +18,10 @@ type (
 )
 
 func (h SpaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	spaces := make([]string, 0, len(h.Spaces))
-	for space := range h.Spaces {
+	userInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+
+	spaces := make([]string, 0, len(userInfo.Spaces))
+	for space := range userInfo.Spaces {
 		spaces = append(spaces, space)
 	}
 

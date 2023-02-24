@@ -45,9 +45,15 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dirPath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	dirPath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
 		return
 	}
 
@@ -99,9 +105,15 @@ func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dirPath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	dirPath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
 		return
 	}
 

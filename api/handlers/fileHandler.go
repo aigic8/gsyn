@@ -50,9 +50,15 @@ func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	filePath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
 		return
 	}
 
@@ -89,9 +95,15 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	filePath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
 		return
 	}
 
@@ -165,6 +177,12 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		return
+	}
+
 	matchedPaths, err := filepath.Glob(pattern)
 	if err != nil {
 		// as said in https://pkg.go.dev/path/filepath#Glob the only error is for malformed patterns
@@ -211,9 +229,15 @@ func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, _, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	filePath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
+	if _, ok := uInfo.Spaces[spaceName]; !ok {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
 		return
 	}
 

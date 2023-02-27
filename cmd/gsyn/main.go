@@ -1,21 +1,26 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path"
 	"time"
 
+	"github.com/aigic8/gosyn/api"
 	"github.com/aigic8/gosyn/api/client"
+	apiUtils "github.com/aigic8/gosyn/api/handlers/utils"
 	u "github.com/aigic8/gosyn/cmd/gsyn/utils"
 	"github.com/alexflint/go-arg"
 	"github.com/fatih/color"
+	"github.com/quic-go/quic-go/http3"
 )
 
 type (
 	args struct {
-		Cp *cpArgs `arg:"subcommand:cp"`
+		Cp    *cpArgs    `arg:"subcommand:cp"`
+		Serve *serveArgs `arg:"subcommand:serve"`
 	}
 
 	cpArgs struct {
@@ -24,6 +29,8 @@ type (
 		Paths   []string `arg:"positional"`
 		Timeout int64    `arg:"-t,--timeout"`
 	}
+
+	serveArgs struct{}
 )
 
 const DEFAULT_TIMEOUT int64 = 5000
@@ -49,6 +56,32 @@ func main() {
 			}
 		}
 		CP(args.Cp, config.Client.Servers)
+	} else if args.Serve != nil {
+		if config.Server == nil {
+			errOut("no configuration found for server")
+		}
+		// FIXME bad dependency apiUtils, find a way to resolve
+		users := map[string]apiUtils.UserInfo{}
+		if config.Server.Users == nil || len(config.Server.Users) == 0 {
+			warn("starting server with no users!")
+		} else {
+			for _, user := range config.Server.Users {
+				spacesMap := map[string]bool{}
+				for _, space := range user.Spaces {
+					if err = validateSpacePath(space); err != nil {
+						warn("validating space '%s': %s", space, err.Error())
+					}
+					spacesMap[space] = true
+				}
+				users[user.GUID] = apiUtils.UserInfo{GUID: user.GUID, Spaces: spacesMap}
+			}
+		}
+
+		r := api.Router(config.Server.Spaces, users)
+		err = api.Serve(r, config.Server.Address, config.Server.CertPath, config.Server.PrivPath)
+		if err != nil {
+			errOut("running server: %s", err.Error())
+		}
 	}
 
 }
@@ -58,7 +91,7 @@ func CP(cpArgs *cpArgs, servers map[string]string) {
 	if err != nil {
 		errOut(err.Error())
 	}
-	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond}
+	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond, Transport: &http3.RoundTripper{}}
 	gc := &client.GoSynClient{C: c}
 
 	pathsLen := len(cpArgs.Paths)
@@ -146,4 +179,27 @@ func errOut(format string, a ...any) {
 	fmt.Fprint(os.Stderr, errPrepend)
 	fmt.Fprintf(os.Stderr, format+"\n", a...)
 	os.Exit(1)
+}
+
+var warnPrepend = color.New(color.FgYellow).Sprint(" WARN ")
+
+func warn(format string, a ...any) {
+	fmt.Fprint(os.Stderr, warnPrepend)
+	fmt.Fprintf(os.Stderr, format+"\n", a...)
+}
+
+func validateSpacePath(spacePath string) error {
+	stat, err := os.Stat(spacePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errors.New("path does not exist")
+		}
+		return err
+	}
+
+	if !stat.IsDir() {
+		return errors.New("path is not a directory")
+	}
+
+	return nil
 }

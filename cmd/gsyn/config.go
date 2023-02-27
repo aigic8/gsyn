@@ -25,8 +25,11 @@ type (
 	}
 
 	ServerConfig struct {
-		Spaces map[string]string `toml:"spaces" validate:"required"`
-		Users  []ServerUser      `toml:"users"`
+		Spaces   map[string]string `toml:"spaces" validate:"required"`
+		Users    []ServerUser      `toml:"users"`
+		Address  string            `toml:"address" validate:"required"`
+		CertPath string            `toml:"certPath"  validate:"required"`
+		PrivPath string            `toml:"privPath" validate:"required"`
 	}
 
 	ServerUser struct {

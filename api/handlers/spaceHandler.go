@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 type SpaceHandler struct {
@@ -25,8 +26,8 @@ func (h SpaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		spaces = append(spaces, space)
 	}
 
-	res := utils.APIResponse[SpaceGetAllRespData]{OK: true, Data: &SpaceGetAllRespData{Spaces: spaces}}
-	resBytes, err := json.Marshal(&res)
+	res := pb.SpaceGetAllResponse{Spaces: spaces}
+	resBytes, err := proto.Marshal(&res)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 		return

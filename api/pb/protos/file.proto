@@ -1,0 +1,26 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/aigic8/gsyn/api/pb";
+
+import "google/protobuf/timestamp.proto";
+
+message FileGetMatchResponse {
+  repeated string matches = 3;
+}
+
+// message FilePutNewResponse {
+//   bool ok = 1;
+//   string error = 2;
+// }
+
+message GetStatResponse {
+  StatInfo stat = 3;
+}
+
+message StatInfo {
+  string name = 1;
+  bool isDir = 2;
+  int64 size = 3;
+  google.protobuf.Timestamp modTime = 4;
+}

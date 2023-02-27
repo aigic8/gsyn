@@ -1,0 +1,9 @@
+
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/aigic8/gsyn/api/pb";
+
+message ApiError {
+  string message = 2;
+}

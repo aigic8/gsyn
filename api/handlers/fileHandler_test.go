@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,9 +12,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/aigic8/gosyn/api/handlers/handlerstest"
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
 )
 
 type fileGetTestCase struct {
@@ -228,13 +229,12 @@ func TestFileMatch(t *testing.T) {
 				panic(err)
 			}
 
-			var resData FileGetMatchResp
-			if err = json.Unmarshal(resBody, &resData); err != nil {
+			var resData pb.FileGetMatchResponse
+			if err = proto.Unmarshal(resBody, &resData); err != nil {
 				panic(err)
 			}
 
-			assert.True(t, resData.OK)
-			assert.ElementsMatch(t, resData.Data.Matches, tc.Files)
+			assert.ElementsMatch(t, resData.Matches, tc.Files)
 		})
 	}
 
@@ -311,15 +311,14 @@ func TestFileStat(t *testing.T) {
 				panic(err)
 			}
 
-			var resData FileGetStatResp
-			if err = json.Unmarshal(resBody, &resData); err != nil {
+			var resData pb.GetStatResponse
+			if err = proto.Unmarshal(resBody, &resData); err != nil {
 				panic(err)
 			}
 
-			assert.True(t, resData.OK)
-			assert.Equal(t, resData.Data.Stat.Name, tc.StatName)
-			assert.Equal(t, resData.Data.Stat.IsDir, tc.StatIsDir)
-			assert.NotEqual(t, resData.Data.Stat.Size, 0)
+			assert.Equal(t, resData.Stat.Name, tc.StatName)
+			assert.Equal(t, resData.Stat.IsDir, tc.StatIsDir)
+			assert.NotEqual(t, resData.Stat.Size, 0)
 		})
 	}
 

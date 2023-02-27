@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/protobuf/proto"
 )
 
 type DirHandler struct {
@@ -78,17 +79,13 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	children := make([]DirChild, 0, len(rawChildren))
+	children := make([]*pb.DirChild, 0, len(rawChildren))
 	for _, child := range rawChildren {
-		children = append(children, DirChild{Name: child.Name(), IsDir: child.IsDir()})
+		children = append(children, &pb.DirChild{Name: child.Name(), IsDir: child.IsDir()})
 	}
 
-	res := utils.APIResponse[DirGetListRespData]{
-		OK:   true,
-		Data: &DirGetListRespData{Children: children},
-	}
-
-	resBytes, err := json.Marshal(&res)
+	res := pb.DirGetListResponse{Children: children}
+	resBytes, err := proto.Marshal(&res)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
 		return
@@ -134,22 +131,18 @@ func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 
 	// FIXME show the path based space, maybe server does not want to reveal the full path
 	base, dirName := path.Split(dirPath)
-	t := utils.Tree{
-		dirName: utils.TreeItem{
+	t := map[string]*pb.TreeItem{
+		dirName: {
 			Path:     dirPath,
 			IsDir:    true,
-			Children: map[string]utils.TreeItem{},
+			Children: map[string]*pb.TreeItem{},
 		},
 	}
 
 	utils.FillTree(base, t)
 
-	res := utils.APIResponse[DirGetTreeRespData]{
-		OK:   true,
-		Data: &DirGetTreeRespData{Tree: t},
-	}
-
-	resBytes, err := json.Marshal(&res)
+	res := pb.DirGetTreeResponse{Tree: t}
+	resBytes, err := proto.Marshal(&res)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
 		return

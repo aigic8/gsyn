@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 type spaceGetAllTestCase struct {
@@ -49,18 +50,19 @@ func TestSpaceGetAll(t *testing.T) {
 			defer res.Body.Close()
 			assert.Equal(t, res.StatusCode, tc.Status)
 
-			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				panic(err)
-			}
+			if res.StatusCode == http.StatusOK {
+				resBody, err := io.ReadAll(res.Body)
+				if err != nil {
+					panic(err)
+				}
 
-			var resData utils.APIResponse[SpaceGetAllRespData]
-			if err := json.Unmarshal(resBody, &resData); err != nil {
-				panic(err)
-			}
+				var resData pb.SpaceGetAllResponse
+				if err := proto.Unmarshal(resBody, &resData); err != nil {
+					panic(err)
+				}
 
-			assert.Equal(t, resData.OK, true)
-			assert.ElementsMatch(t, resData.Data.Spaces, tc.Spaces)
+				assert.ElementsMatch(t, resData.Spaces, tc.Spaces)
+			}
 		})
 	}
 

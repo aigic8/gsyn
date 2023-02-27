@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +12,10 @@ import (
 	"time"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type FileHandler struct {
@@ -154,14 +156,7 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := utils.APIResponse[map[string]bool]{OK: true, Data: &map[string]bool{}}
-	resBytes, err := json.Marshal(res)
-	if err != nil {
-		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
-		return
-	}
-
-	w.Write(resBytes)
+	w.Write([]byte{})
 }
 
 func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
@@ -206,18 +201,17 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := FileGetMatchResp{
-		OK:   true,
-		Data: &FileGetMatchRespData{Matches: matchedFiles},
+	resp := pb.FileGetMatchResponse{
+		Matches: matchedFiles,
 	}
 
-	respJson, err := json.Marshal(&resp)
+	respProto, err := proto.Marshal(&resp)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 		return
 	}
 
-	w.Write(respJson)
+	w.Write(respProto)
 }
 
 // TODO stating works for dirs too... But the functionality is the same...
@@ -251,23 +245,20 @@ func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := FileGetStatResp{
-		OK: true,
-		Data: &FileGetStatRespData{
-			Stat: StatInfo{
-				Name:    stat.Name(),
-				IsDir:   stat.IsDir(),
-				ModTime: stat.ModTime(),
-				Size:    stat.Size(),
-			},
+	resp := pb.GetStatResponse{
+		Stat: &pb.StatInfo{
+			Name:    stat.Name(),
+			IsDir:   stat.IsDir(),
+			ModTime: timestamppb.New(stat.ModTime()),
+			Size:    stat.Size(),
 		},
 	}
 
-	respJson, err := json.Marshal(&resp)
+	respProto, err := proto.Marshal(&resp)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 		return
 	}
 
-	w.Write(respJson)
+	w.Write(respProto)
 }

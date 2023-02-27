@@ -1,0 +1,8 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/aigic8/gsyn/api/pb";
+
+message SpaceGetAllResponse {
+  repeated string spaces = 3;
+}

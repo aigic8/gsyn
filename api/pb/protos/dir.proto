@@ -1,0 +1,23 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/aigic8/gsyn/api/pb";
+
+message DirGetListResponse {
+  repeated DirChild children = 3;
+}
+
+message DirChild {
+  string name = 1;
+  bool isDir = 2;
+}
+
+message DirGetTreeResponse {
+  map<string, TreeItem> tree = 3;
+}
+
+message TreeItem {
+  string path = 1;
+  bool isDir = 2;
+  map<string, TreeItem> children = 3;
+}

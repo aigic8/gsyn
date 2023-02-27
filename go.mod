@@ -26,4 +26,5 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/pelletier/go-toml/v2 v2.0.6
 	github.com/stretchr/testify v1.8.1
+	google.golang.org/protobuf v1.28.1
 )

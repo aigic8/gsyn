@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,15 +10,17 @@ import (
 
 	"github.com/aigic8/gosyn/api/handlers/handlerstest"
 	"github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 type getDirListTestCase struct {
 	Name   string
 	Status int
 	Path   string
-	Resp   DirGetListRespData
+	Resp   []*pb.DirChild
 }
 
 func TestDirGetList(t *testing.T) {
@@ -40,11 +41,9 @@ func TestDirGetList(t *testing.T) {
 		panic(err)
 	}
 
-	normalResp := DirGetListRespData{
-		Children: []DirChild{
-			{Name: "special", IsDir: true},
-			{Name: "truth.txt", IsDir: false},
-		},
+	normalResp := []*pb.DirChild{
+		{Name: "special", IsDir: true},
+		{Name: "truth.txt", IsDir: false},
 	}
 
 	// TODO add test caeses:
@@ -83,23 +82,23 @@ func TestDirGetList(t *testing.T) {
 
 			res := w.Result()
 			defer res.Body.Close()
-
 			assert.Equal(t, res.StatusCode, tc.Status)
 
-			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				panic(err)
+			if res.StatusCode == http.StatusOK {
+				resBody, err := io.ReadAll(res.Body)
+				if err != nil {
+					panic(err)
+				}
+
+				t.Log(string(resBody))
+
+				var resData pb.DirGetListResponse
+				if err = proto.Unmarshal(resBody, &resData); err != nil {
+					panic(err)
+				}
+
+				assert.ElementsMatch(t, resData.Children, tc.Resp)
 			}
-
-			t.Log(string(resBody))
-
-			var resData utils.APIResponse[DirGetListRespData]
-			if err = json.Unmarshal(resBody, &resData); err != nil {
-				panic(err)
-			}
-
-			assert.Equal(t, resData.OK, true)
-			assert.Equal(t, resData.Data, &tc.Resp)
 		})
 	}
 }
@@ -108,7 +107,7 @@ type getDirTreeTestCase struct {
 	Name   string
 	Status int
 	Path   string
-	Tree   utils.Tree
+	Tree   map[string]*pb.TreeItem
 }
 
 func TestDirGetTree(t *testing.T) {
@@ -132,22 +131,21 @@ func TestDirGetTree(t *testing.T) {
 	}
 
 	normalBase := path.Join(base, "space/seethers")
-	normalTree := utils.Tree{
-		"seethers": utils.TreeItem{
+	normalTree := map[string]*pb.TreeItem{
+		"seethers": {
 			Path:  normalBase,
 			IsDir: true,
-			Children: map[string]utils.TreeItem{
+			Children: map[string]*pb.TreeItem{
 				"special": {
 					Path:  path.Join(normalBase, "/special"),
 					IsDir: true,
-					Children: map[string]utils.TreeItem{
-						"save-today.txt": {Path: path.Join(normalBase, "/special/save-today.txt"), IsDir: false, Children: map[string]utils.TreeItem{}},
+					Children: map[string]*pb.TreeItem{
+						"save-today.txt": {Path: path.Join(normalBase, "/special/save-today.txt"), IsDir: false},
 					},
 				},
 				"truth.txt": {
-					Path:     path.Join(normalBase, "/truth.txt"),
-					IsDir:    false,
-					Children: map[string]utils.TreeItem{},
+					Path:  path.Join(normalBase, "/truth.txt"),
+					IsDir: false,
 				},
 			},
 		},
@@ -191,18 +189,19 @@ func TestDirGetTree(t *testing.T) {
 
 		assert.Equal(t, res.StatusCode, tc.Status)
 
-		resBody, err := io.ReadAll(res.Body)
-		if err != nil {
-			panic(err)
-		}
+		if res.StatusCode == http.StatusOK {
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				panic(err)
+			}
 
-		var resData utils.APIResponse[DirGetTreeRespData]
-		if err = json.Unmarshal(resBody, &resData); err != nil {
-			panic(err)
-		}
+			var resData pb.DirGetTreeResponse
+			if err = proto.Unmarshal(resBody, &resData); err != nil {
+				panic(err)
+			}
 
-		assert.Equal(t, resData.OK, true)
-		assert.Equal(t, resData.Data.Tree, tc.Tree)
+			assert.Equal(t, resData.Tree, tc.Tree)
+		}
 	}
 
 }

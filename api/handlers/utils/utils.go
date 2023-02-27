@@ -2,13 +2,15 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/aigic8/gosyn/api/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 type (
@@ -55,7 +57,7 @@ func UserAuthMiddleware(users map[string]UserInfo) func(http.Handler) http.Handl
 	}
 }
 
-func FillTree(base string, tree map[string]TreeItem) error {
+func FillTree(base string, tree map[string]*pb.TreeItem) error {
 	for key, item := range tree {
 		if !item.IsDir {
 			continue
@@ -69,10 +71,10 @@ func FillTree(base string, tree map[string]TreeItem) error {
 
 		for _, child := range children {
 			childName := child.Name()
-			tree[key].Children[childName] = TreeItem{
+			tree[key].Children[childName] = &pb.TreeItem{
 				IsDir:    child.IsDir(),
 				Path:     path.Join(curr, childName),
-				Children: map[string]TreeItem{},
+				Children: map[string]*pb.TreeItem{},
 			}
 		}
 
@@ -119,18 +121,14 @@ type APIResponse[T any] struct {
 	Data  *T     `json:"data,omitempty"`
 }
 
-func WriteAPIErr(w http.ResponseWriter, status int, error string) error {
-	w.WriteHeader(status)
-	resp := APIResponse[bool]{
-		OK:    false,
-		Error: error,
-	}
-	respData, err := json.Marshal(&resp)
+func WriteAPIErr(w http.ResponseWriter, status int, message string) error {
+	bytes, err := proto.Marshal(&pb.ApiError{Message: message})
 	if err != nil {
 		return err
 	}
 
-	if _, err = w.Write(respData); err != nil {
+	w.WriteHeader(status)
+	if _, err = w.Write(bytes); err != nil {
 		return err
 	}
 

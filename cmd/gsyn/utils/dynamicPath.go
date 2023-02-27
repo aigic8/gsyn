@@ -85,7 +85,7 @@ func (dPath *DynamicPath) Stat(gc *client.GoSynClient) (*StatInfo, error) {
 	return &StatInfo{
 		Name:    statInfo.Name,
 		IsDir:   statInfo.IsDir,
-		ModTime: statInfo.ModTime,
+		ModTime: statInfo.ModTime.AsTime(),
 		Size:    statInfo.Size,
 	}, nil
 

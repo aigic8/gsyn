@@ -8,15 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type SpaceHandler struct {
-}
-type (
-	SpaceGetAllResp = utils.APIResponse[SpaceGetAllRespData]
-
-	SpaceGetAllRespData struct {
-		Spaces []string `json:"spaces"`
-	}
-)
+type SpaceHandler struct{}
 
 func (h SpaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	userInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)

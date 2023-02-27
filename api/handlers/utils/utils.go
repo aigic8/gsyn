@@ -13,16 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type (
-	Tree = map[string]TreeItem
-
-	TreeItem struct {
-		Path     string              `json:"path"`
-		IsDir    bool                `json:"isDir"`
-		Children map[string]TreeItem `json:"children"`
-	}
-)
-
 type RequestContextKey int
 
 const (
@@ -113,12 +103,6 @@ func SplitSpaceAndPath(rawPath string) (string, string, error) {
 	}
 
 	return pathParts[0], pathParts[1], nil
-}
-
-type APIResponse[T any] struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
-	Data  *T     `json:"data,omitempty"`
 }
 
 func WriteAPIErr(w http.ResponseWriter, status int, message string) error {

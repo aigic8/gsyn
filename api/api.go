@@ -10,7 +10,7 @@ import (
 func Router(spaces map[string]string, users map[string]utils.UserInfo) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.AllowContentType("application/json"))
+	// r.Use(middleware.AllowContentType("application/json"))
 	r.Use(middleware.Logger)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.Recoverer)

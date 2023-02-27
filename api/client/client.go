@@ -1,13 +1,12 @@
 package client
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 
-	"github.com/aigic8/gosyn/api/handlers"
-	hutils "github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/api/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 type GoSynClient struct {
@@ -15,53 +14,53 @@ type GoSynClient struct {
 }
 
 // TODO add test to clients
-func (gc *GoSynClient) GetDirList(baseAPIURL string, dirPath string) ([]handlers.DirChild, error) {
+func (gc *GoSynClient) GetDirList(baseAPIURL string, dirPath string) ([]*pb.DirChild, error) {
 	res, err := gc.C.Get(baseAPIURL + "/api/dirs/list/" + dirPath)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
+	if res.StatusCode == http.StatusOK {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var resData pb.DirGetListResponse
+		if err = proto.Unmarshal(resBody, &resData); err != nil {
+			return nil, err
+		}
+
+		return resData.Children, nil
 	}
 
-	var resData handlers.DirGetListResp
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return nil, err
-	}
-
-	if !resData.OK {
-		return nil, errors.New("none-ok response: " + resData.Error)
-	}
-
-	return resData.Data.Children, nil
+	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (hutils.Tree, error) {
+func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (map[string]*pb.TreeItem, error) {
 	res, err := gc.C.Get(baseAPIURL + "/api/dirs/tree/" + dirPath)
 	if err != nil {
-		return hutils.Tree{}, err
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
+	if res.StatusCode == http.StatusOK {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var resData pb.DirGetTreeResponse
+		if err = proto.Unmarshal(resBody, &resData); err != nil {
+			return nil, err
+		}
+
+		return resData.Tree, nil
 	}
 
-	var resData handlers.DirGetTreeResp
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return nil, err
-	}
-
-	if !resData.OK {
-		return nil, errors.New("none-ok response: " + resData.Error)
-	}
-
-	return resData.Data.Tree, nil
+	return nil, getErr(res)
 }
 
 func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.Reader, error) {
@@ -69,20 +68,10 @@ func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.Reader, e
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		defer res.Body.Close()
-		resBody, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		var resData hutils.APIResponse[map[string]bool]
-		if err = json.Unmarshal(resBody, &resData); err != nil {
-			return nil, err
-		}
-
-		return nil, errors.New("none-ok status: " + resData.Error)
+		return nil, getErr(res)
 	}
 
 	return res.Body, nil
@@ -107,18 +96,8 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath string, isForced b
 	}
 	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	var resData hutils.APIResponse[map[string]bool]
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return err
-	}
-
-	if !resData.OK {
-		return errors.New("none-ok response: " + resData.Error)
+	if res.StatusCode != http.StatusOK {
+		return getErr(res)
 	}
 
 	return nil
@@ -131,17 +110,21 @@ func (gc *GoSynClient) GetMatches(baseAPIURL string, path string) ([]string, err
 	}
 	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
+	if res.StatusCode == http.StatusOK {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var resData pb.FileGetMatchResponse
+		if err = proto.Unmarshal(resBody, &resData); err != nil {
+			return nil, err
+		}
+
+		return resData.Matches, nil
 	}
 
-	var resData handlers.FileGetMatchResp
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return nil, err
-	}
-
-	return resData.Data.Matches, nil
+	return nil, getErr(res)
 }
 
 func (gc *GoSynClient) GetAllSpaces(baseAPIURL string) ([]string, error) {
@@ -149,48 +132,59 @@ func (gc *GoSynClient) GetAllSpaces(baseAPIURL string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
+	if res.StatusCode == http.StatusOK {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var resData pb.SpaceGetAllResponse
+		if err = proto.Unmarshal(resBody, &resData); err != nil {
+			return nil, err
+		}
+
+		return resData.Spaces, nil
 	}
 
-	var resData handlers.SpaceGetAllResp
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return nil, err
-	}
-
-	if !resData.OK {
-		return nil, errors.New("none-ok response: " + resData.Error)
-	}
-
-	return resData.Data.Spaces, nil
+	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetStat(baseAPIURL string, statPath string) (handlers.StatInfo, error) {
+func (gc *GoSynClient) GetStat(baseAPIURL string, statPath string) (*pb.StatInfo, error) {
 	res, err := gc.C.Get(baseAPIURL + "/api/files/stat/" + statPath)
 	if err != nil {
-		return handlers.StatInfo{}, err
+		return nil, err
 	}
-
 	defer res.Body.Close()
 
+	if res.StatusCode == http.StatusOK {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var resData pb.GetStatResponse
+		if err = proto.Unmarshal(resBody, &resData); err != nil {
+			return nil, err
+		}
+
+		return resData.Stat, nil
+	}
+
+	return nil, getErr(res)
+}
+
+func getErr(res *http.Response) error {
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
-		return handlers.StatInfo{}, err
+		return err
 	}
 
-	var resData handlers.FileGetStatResp
-	if err = json.Unmarshal(resBody, &resData); err != nil {
-		return handlers.StatInfo{}, err
+	var resData pb.ApiError
+	if err = proto.Unmarshal(resBody, &resData); err != nil {
+		return err
 	}
 
-	if !resData.OK {
-		return handlers.StatInfo{}, errors.New("none-ok response: " + resData.Error)
-	}
-
-	return resData.Data.Stat, nil
-
+	return errors.New(resData.Message)
 }

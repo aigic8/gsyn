@@ -18,27 +18,6 @@ type DirHandler struct {
 	Spaces map[string]string
 }
 
-type (
-	DirGetListResp = utils.APIResponse[DirGetListRespData]
-
-	DirGetListRespData struct {
-		Children []DirChild `json:"children"`
-	}
-
-	DirChild struct {
-		Name  string `json:"name"`
-		IsDir bool   `json:"isDir"`
-	}
-)
-
-type (
-	DirGetTreeResp = utils.APIResponse[DirGetTreeRespData]
-
-	DirGetTreeRespData struct {
-		Tree utils.Tree `json:"tree"`
-	}
-)
-
 func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
 	if rawPath == "" {

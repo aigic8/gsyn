@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
 	"github.com/aigic8/gosyn/api/pb"
@@ -21,29 +20,6 @@ import (
 type FileHandler struct {
 	Spaces map[string]string
 }
-
-type (
-	FileGetMatchResp = utils.APIResponse[FileGetMatchRespData]
-
-	FileGetMatchRespData struct {
-		Matches []string `json:"matches"`
-	}
-)
-
-type (
-	FileGetStatResp = utils.APIResponse[FileGetStatRespData]
-
-	FileGetStatRespData struct {
-		Stat StatInfo `json:"stat"`
-	}
-
-	StatInfo struct {
-		Name    string    `json:"name"`
-		IsDir   bool      `json:"isDir"`
-		Size    int64     `json:"size"`
-		ModTime time.Time `json:"modTime"`
-	}
-)
 
 func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))

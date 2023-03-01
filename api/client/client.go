@@ -63,7 +63,7 @@ func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (map[string
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.Reader, error) {
+func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.ReadCloser, error) {
 	res, err := gc.C.Get(baseAPIURL + "/api/files/" + filePath)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,8 @@ func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.Reader, e
 	return res.Body, nil
 }
 
-func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath string, isForced bool, reader io.Reader) error {
+func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath, srcName string, isForced bool, reader io.ReadCloser) error {
+	defer reader.Close()
 	req, err := http.NewRequest(http.MethodPut, baseAPIURL+"/api/files/new", reader)
 	if err != nil {
 		return err
@@ -89,6 +90,7 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath string, isForced b
 	} else {
 		req.Header.Set("x-force", "false")
 	}
+	req.Header.Set("x-src-name", srcName)
 
 	res, err := gc.C.Do(req)
 	if err != nil {

@@ -138,7 +138,7 @@ func isPatternLike(path string) bool {
 	return strings.ContainsRune(path, '?') || strings.ContainsRune(path, '*')
 }
 
-func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.Reader, error) {
+func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.ReadCloser, error) {
 	if !dPath.IsRemote {
 		return os.Open(dPath.Path)
 	}
@@ -146,7 +146,8 @@ func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.Reader, error) {
 	return gc.GetFile(dPath.BaseAPIURL, dPath.Path)
 }
 
-func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.Reader) error {
+func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.ReadCloser) error {
+	defer reader.Close()
 	if !dPath.IsRemote {
 		writeDest := dPath.Path
 		writeStat, err := os.Stat(dPath.Path)
@@ -184,8 +185,7 @@ func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force boo
 		return nil
 	}
 
-	// FIXME should be copy so that the path is a directory, the file will be added to dir as a file
-	return gc.PutNewFile(dPath.BaseAPIURL, dPath.Path, force, reader)
+	return gc.PutNewFile(dPath.BaseAPIURL, dPath.Path, srcName, force, reader)
 }
 
 func (dPath *DynamicPath) String() string {

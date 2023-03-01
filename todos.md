@@ -13,4 +13,4 @@
 - [ ] add support for recursive copies (src to be a folder)
 - [ ] find a way to test remote copying 
 - [x] remove panics from cmd/copy (better error handling)
-- [ ] !IMPORTANT! we are not closing readers for dynamic paths right now, which I do think is dangerous.
+- [x] !IMPORTANT! we are not closing readers for dynamic paths right now, which I do think is dangerous.

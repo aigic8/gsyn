@@ -67,13 +67,25 @@ func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 	rawPath := strings.TrimSpace(r.Header.Get("x-file-path"))
+	srcName := strings.TrimSpace(r.Header.Get("x-src-name"))
 	isForced := r.Header.Get("x-force") == "true"
+
 	if rawPath == "" {
 		utils.WriteAPIErr(w, http.StatusBadRequest, "file path is required")
 		return
 	}
 
-	filePath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
+	if srcName == "" {
+		utils.WriteAPIErr(w, http.StatusBadRequest, "source name is required")
+		return
+	}
+
+	if strings.ContainsRune(srcName, '/') {
+		utils.WriteAPIErr(w, http.StatusBadRequest, "source name can not contain '/'")
+		return
+	}
+
+	destPath, spaceName, err := utils.SpacePathToNormalPath(rawPath, h.Spaces)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusBadRequest, err.Error())
 		return
@@ -85,42 +97,59 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parentPath := path.Dir(filePath)
-	parentStat, err := os.Stat(parentPath)
+	dirMode := false
+	wPath := destPath
+	fileStat, err := os.Stat(destPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("parent dir '%s' does not exist", parentPath))
+		if !errors.Is(err, os.ErrNotExist) {
+			utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 			return
 		}
-		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
-		return
+	} else {
+		if fileStat.IsDir() {
+			dirMode = true
+			wPath = path.Join(destPath, srcName)
+		}
 	}
 
-	if !parentStat.IsDir() {
-		utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("parent dir '%s' is not a directory", parentPath))
-		return
+	if !dirMode {
+		parentPath := path.Dir(destPath)
+		parentStat, err := os.Stat(parentPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("parent dir '%s' does not exist", parentPath))
+				return
+			}
+			utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
+			return
+		}
+
+		if !parentStat.IsDir() {
+			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("parent dir '%s' is not a directory", parentPath))
+			return
+		}
 	}
 
 	// FIXME check for if path is in space space
 
-	fileStat, err := os.Stat(filePath)
+	wStat, err := os.Stat(wPath)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 			return
 		}
 	} else { // path does exist
-		if fileStat.IsDir() {
-			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("path '%s' is a directory", filePath))
+		if wStat.IsDir() {
+			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("path '%s' is a directory", wPath))
 			return
 		}
 		if !isForced {
-			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("path '%s' already exists", filePath))
+			utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("path '%s' already exists", wPath))
 			return
 		}
 	}
 
-	file, err := os.Create(filePath)
+	file, err := os.Create(wPath)
 	if err != nil {
 		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error happened")
 		return

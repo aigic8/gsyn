@@ -96,6 +96,7 @@ type filePutNewTestCase struct {
 	Name        string
 	Status      int
 	NewFilePath string
+	SrcName     string
 	NewFileData []byte
 	RawFilePath string
 }
@@ -122,7 +123,7 @@ func TestFilePutNew(t *testing.T) {
 	// - user is unauthorzid to access space
 	// - [OPTIONAL] space does not exist
 	testCases := []filePutNewTestCase{
-		{Name: "normal", Status: http.StatusOK, NewFilePath: newFilePath, NewFileData: newFileData, RawFilePath: "space/pink-floyd/wish-you-were-here.txt"},
+		{Name: "normal", Status: http.StatusOK, NewFilePath: newFilePath, SrcName: "wish-you-were-here.txt", NewFileData: newFileData, RawFilePath: "space/pink-floyd/wish-you-were-here.txt"},
 	}
 
 	spaces := map[string]string{"pink-floyd": path.Join(base, "space/pink-floyd")}
@@ -135,6 +136,7 @@ func TestFilePutNew(t *testing.T) {
 
 			r := httptest.NewRequest(http.MethodPut, "/", bytes.NewReader(tc.NewFileData))
 			r.Header.Add("x-file-path", tc.NewFilePath)
+			r.Header.Add("x-src-name", tc.SrcName)
 
 			uInfo := utils.UserInfo{
 				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",

@@ -21,7 +21,7 @@ type (
 
 	ClientConfig struct {
 		Servers        map[string]string `toml:"servers" validate:"required"`
-		DefaultTimeout int64             `toml:"defaultTimeout" validate:"gt=0"`
+		DefaultTimeout int64             `toml:"defaultTimeout" validate:"gte=0"`
 	}
 
 	ServerConfig struct {

@@ -18,9 +18,17 @@ type newDynamicPathTestCase struct {
 }
 
 func TestNewDynamicPath(t *testing.T) {
-	servers := map[string]string{
-		"myserver":   "https://myserver.com",
-		"yourserver": "https://youserver.com",
+	servers := map[string]*ServerInfo{
+		"myserver": {
+			Name:       "myserver",
+			BaseAPIURL: "https://myserver.com",
+			GUID:       "",
+		},
+		"yourserver": {
+			Name:       "yourserver",
+			BaseAPIURL: "https://yourserver.com",
+			GUID:       "",
+		},
 	}
 
 	cwd, err := os.Getwd()
@@ -39,10 +47,13 @@ func TestNewDynamicPath(t *testing.T) {
 	}
 
 	remoteDP := &DynamicPath{
-		IsRemote:   true,
-		BaseAPIURL: servers["myserver"],
-		ServerName: "myserver",
-		Path:       "home/projects",
+		IsRemote: true,
+		Server: &ServerInfo{
+			Name:       "myserver",
+			BaseAPIURL: servers["myserver"].BaseAPIURL,
+			GUID:       "",
+		},
+		Path: "home/projects",
 	}
 
 	testCases := []newDynamicPathTestCase{
@@ -123,7 +134,7 @@ func TestDynamicPathCopy(t *testing.T) {
 }
 
 func newLocalDP(rawPath string, base string) *DynamicPath {
-	dPath, err := NewDynamicPath(rawPath, base, map[string]string{})
+	dPath, err := NewDynamicPath(rawPath, base, map[string]*ServerInfo{})
 	if err != nil {
 		panic(err)
 	}

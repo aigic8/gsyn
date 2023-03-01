@@ -20,8 +20,13 @@ type (
 	}
 
 	ClientConfig struct {
-		Servers        map[string]string `toml:"servers" validate:"required"`
-		DefaultTimeout int64             `toml:"defaultTimeout" validate:"gte=0"`
+		Servers        map[string]ClientServerItem `toml:"servers" validate:"required"`
+		DefaultTimeout int64                       `toml:"defaultTimeout" validate:"gte=0"`
+	}
+
+	ClientServerItem struct {
+		GUID    string `toml:"GUID" validate:"required"`
+		Address string `toml:"address" validate:"required,url"`
 	}
 
 	ServerConfig struct {

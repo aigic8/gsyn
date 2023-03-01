@@ -14,8 +14,14 @@ type GoSynClient struct {
 }
 
 // TODO add test to clients
-func (gc *GoSynClient) GetDirList(baseAPIURL string, dirPath string) ([]*pb.DirChild, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/dirs/list/" + dirPath)
+func (gc *GoSynClient) GetDirList(baseAPIURL, dirPath, GUID string) ([]*pb.DirChild, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/list/"+dirPath, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "simple "+GUID)
+
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +44,17 @@ func (gc *GoSynClient) GetDirList(baseAPIURL string, dirPath string) ([]*pb.DirC
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (map[string]*pb.TreeItem, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/dirs/tree/" + dirPath)
+func (gc *GoSynClient) GetDirTree(baseAPIURL, dirPath, GUID string) (map[string]*pb.TreeItem, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/tree/"+dirPath, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Authorization", "simple "+GUID)
 
+	res, err := gc.C.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
@@ -63,8 +74,14 @@ func (gc *GoSynClient) GetDirTree(baseAPIURL string, dirPath string) (map[string
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.ReadCloser, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/files/" + filePath)
+func (gc *GoSynClient) GetFile(baseAPIURL, filePath, GUID string) (io.ReadCloser, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/"+filePath, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "simple "+GUID)
+
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +94,7 @@ func (gc *GoSynClient) GetFile(baseAPIURL string, filePath string) (io.ReadClose
 	return res.Body, nil
 }
 
-func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath, srcName string, isForced bool, reader io.ReadCloser) error {
+func (gc *GoSynClient) PutNewFile(baseAPIURL, filePath, GUID, srcName string, isForced bool, reader io.ReadCloser) error {
 	defer reader.Close()
 	req, err := http.NewRequest(http.MethodPut, baseAPIURL+"/api/files/new", reader)
 	if err != nil {
@@ -91,6 +108,7 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath, srcName string, i
 		req.Header.Set("x-force", "false")
 	}
 	req.Header.Set("x-src-name", srcName)
+	req.Header.Set("Authorization", "simple "+GUID)
 
 	res, err := gc.C.Do(req)
 	if err != nil {
@@ -105,8 +123,15 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL string, filePath, srcName string, i
 	return nil
 }
 
-func (gc *GoSynClient) GetMatches(baseAPIURL string, path string) ([]string, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/files/matches/" + path)
+func (gc *GoSynClient) GetMatches(baseAPIURL, GUID, path string) ([]string, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/matches/"+path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "simple "+GUID)
+
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +154,15 @@ func (gc *GoSynClient) GetMatches(baseAPIURL string, path string) ([]string, err
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetAllSpaces(baseAPIURL string) ([]string, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/spaces/all")
+func (gc *GoSynClient) GetAllSpaces(baseAPIURL, GUID string) ([]string, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/spaces/all", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "simple "+GUID)
+
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +185,15 @@ func (gc *GoSynClient) GetAllSpaces(baseAPIURL string) ([]string, error) {
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetStat(baseAPIURL string, statPath string) (*pb.StatInfo, error) {
-	res, err := gc.C.Get(baseAPIURL + "/api/files/stat/" + statPath)
+func (gc *GoSynClient) GetStat(baseAPIURL, GUID, statPath string) (*pb.StatInfo, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/stat/"+statPath, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "simple "+GUID)
+
+	res, err := gc.C.Do(req)
 	if err != nil {
 		return nil, err
 	}

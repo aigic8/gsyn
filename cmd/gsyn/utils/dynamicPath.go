@@ -13,14 +13,21 @@ import (
 	"github.com/aigic8/gosyn/api/client"
 )
 
-type DynamicPath struct {
-	IsRemote   bool
-	BaseAPIURL string
-	ServerName string
-	Path       string
-}
+type (
+	DynamicPath struct {
+		IsRemote bool
+		Server   *ServerInfo
+		Path     string
+	}
 
-func NewDynamicPath(rawPath string, base string, servers map[string]string) (*DynamicPath, error) {
+	ServerInfo struct {
+		Name       string
+		BaseAPIURL string
+		GUID       string
+	}
+)
+
+func NewDynamicPath(rawPath string, base string, servers map[string]*ServerInfo) (*DynamicPath, error) {
 	pathParts := strings.Split(rawPath, ":")
 	pathPartsLen := len(pathParts)
 	if pathPartsLen > 2 {
@@ -39,7 +46,7 @@ func NewDynamicPath(rawPath string, base string, servers map[string]string) (*Dy
 	}
 
 	// pathPartsLen == 2
-	baseAPIURL, serverExists := servers[pathParts[0]]
+	_, serverExists := servers[pathParts[0]]
 	if !serverExists {
 		return nil, fmt.Errorf("server '%s' does not exist", pathParts[0])
 	}
@@ -48,10 +55,9 @@ func NewDynamicPath(rawPath string, base string, servers map[string]string) (*Dy
 		return nil, fmt.Errorf("empty path")
 	}
 	return &DynamicPath{
-		IsRemote:   true,
-		ServerName: pathParts[0],
-		BaseAPIURL: baseAPIURL,
-		Path:       pathParts[1],
+		IsRemote: true,
+		Server:   servers[pathParts[0]],
+		Path:     pathParts[1],
 	}, nil
 }
 
@@ -77,7 +83,7 @@ func (dPath *DynamicPath) Stat(gc *client.GoSynClient) (*StatInfo, error) {
 		}, nil
 	}
 
-	statInfo, err := gc.GetStat(dPath.BaseAPIURL, dPath.Path)
+	statInfo, err := gc.GetStat(dPath.Server.BaseAPIURL, dPath.Server.GUID, dPath.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +123,7 @@ func (dPath *DynamicPath) GetMatches(gc *client.GoSynClient) ([]*DynamicPath, er
 		return fileMatches, nil
 	}
 
-	matchesStr, err := gc.GetMatches(dPath.BaseAPIURL, dPath.Path)
+	matchesStr, err := gc.GetMatches(dPath.Server.BaseAPIURL, dPath.Server.GUID, dPath.Path)
 	if err != nil {
 		return nil, fmt.Errorf("error getting matches for '%s': %w", dPath.Path, err)
 	}
@@ -128,7 +134,11 @@ func (dPath *DynamicPath) GetMatches(gc *client.GoSynClient) ([]*DynamicPath, er
 
 	fileMatches := make([]*DynamicPath, 0, len(matchesStr))
 	for _, match := range matchesStr {
-		fileMatches = append(fileMatches, &DynamicPath{IsRemote: true, BaseAPIURL: dPath.BaseAPIURL, ServerName: dPath.ServerName, Path: match})
+		fileMatches = append(fileMatches, &DynamicPath{
+			IsRemote: true,
+			Server:   dPath.Server,
+			Path:     match,
+		})
 	}
 
 	return fileMatches, nil
@@ -143,7 +153,7 @@ func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.ReadCloser, error) 
 		return os.Open(dPath.Path)
 	}
 
-	return gc.GetFile(dPath.BaseAPIURL, dPath.Path)
+	return gc.GetFile(dPath.Server.BaseAPIURL, dPath.Server.GUID, dPath.Path)
 }
 
 func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.ReadCloser) error {
@@ -185,12 +195,12 @@ func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force boo
 		return nil
 	}
 
-	return gc.PutNewFile(dPath.BaseAPIURL, dPath.Path, srcName, force, reader)
+	return gc.PutNewFile(dPath.Server.BaseAPIURL, dPath.Path, dPath.Server.GUID, srcName, force, reader)
 }
 
 func (dPath *DynamicPath) String() string {
 	if dPath.IsRemote {
-		return dPath.ServerName + ":" + dPath.Path
+		return dPath.Server.Name + ":" + dPath.Path
 	}
 	return dPath.Path
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -44,6 +45,15 @@ func main() {
 		errOut("loading configuration: %s", err.Error())
 	}
 
+	serverInfos := map[string]*u.ServerInfo{}
+	for serverName, info := range config.Client.Servers {
+		serverInfos[serverName] = &u.ServerInfo{
+			Name:       serverName,
+			BaseAPIURL: info.Address,
+			GUID:       info.GUID,
+		}
+	}
+
 	if args.Cp != nil {
 		if config.Client == nil {
 			errOut("no configuration found for client")
@@ -55,12 +65,20 @@ func main() {
 				args.Cp.Timeout = DEFAULT_TIMEOUT
 			}
 		}
-		CP(args.Cp, config.Client.Servers)
+		CP(args.Cp, serverInfos)
+
 	} else if args.Serve != nil {
 		if config.Server == nil {
 			errOut("no configuration found for server")
 		}
 		// FIXME bad dependency apiUtils, find a way to resolve
+
+		for _, spacePath := range config.Server.Spaces {
+			if err = validateSpacePath(spacePath); err != nil {
+				warn("validating space '%s': %s", spacePath, err.Error())
+			}
+		}
+
 		users := map[string]apiUtils.UserInfo{}
 		if config.Server.Users == nil || len(config.Server.Users) == 0 {
 			warn("starting server with no users!")
@@ -68,8 +86,8 @@ func main() {
 			for _, user := range config.Server.Users {
 				spacesMap := map[string]bool{}
 				for _, space := range user.Spaces {
-					if err = validateSpacePath(space); err != nil {
-						warn("validating space '%s': %s", space, err.Error())
+					if _, ok := config.Server.Spaces[space]; !ok {
+						errOut("unknown space '%s'", space)
 					}
 					spacesMap[space] = true
 				}
@@ -86,13 +104,11 @@ func main() {
 
 }
 
-func CP(cpArgs *cpArgs, servers map[string]string) {
+func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		errOut(err.Error())
 	}
-	c := &http.Client{Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond, Transport: &http3.RoundTripper{}}
-	gc := &client.GoSynClient{C: c}
 
 	pathsLen := len(cpArgs.Paths)
 	if pathsLen < 2 {
@@ -112,6 +128,15 @@ func CP(cpArgs *cpArgs, servers map[string]string) {
 	if err != nil {
 		errOut("malformed path: %s", err.Error())
 	}
+
+	c := &http.Client{
+		Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond,
+		Transport: &http3.RoundTripper{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // FIXME
+		},
+	}
+
+	gc := &client.GoSynClient{C: c}
 
 	// destDirMode is when we destinition MUST BE a directory to copy files to (when we have multiple sources or matches)
 	destDirMode := len(srcs) > 1
@@ -163,7 +188,7 @@ func CP(cpArgs *cpArgs, servers map[string]string) {
 
 		matchDest := dest
 		if destDirMode {
-			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, BaseAPIURL: dest.BaseAPIURL, ServerName: dest.ServerName, Path: path.Join(dest.Path, path.Base(match.Path))}
+			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, Server: dest.Server, Path: path.Join(dest.Path, path.Base(match.Path))}
 		}
 
 		if err = matchDest.Copy(gc, path.Base(match.Path), cpArgs.Force, reader); err != nil {

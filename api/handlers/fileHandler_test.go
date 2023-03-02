@@ -63,7 +63,7 @@ func TestFileGet(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
+			r := httptest.NewRequest(http.MethodGet, "/?path="+tc.Path, nil)
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("path", tc.Path)
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
@@ -206,11 +206,7 @@ func TestFileMatch(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-
-			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("path", tc.Pattern)
-			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+			r := httptest.NewRequest(http.MethodGet, "/?pattern="+tc.Pattern, nil)
 
 			uInfo := utils.UserInfo{
 				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
@@ -288,11 +284,7 @@ func TestFileStat(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-
-			r := httptest.NewRequest(http.MethodGet, "/{path}", nil)
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("path", tc.Path)
-			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+			r := httptest.NewRequest(http.MethodGet, "/?path="+tc.Path, nil)
 
 			uInfo := utils.UserInfo{
 				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",

@@ -23,16 +23,16 @@ func Router(spaces map[string]string, users map[string]utils.UserInfo) *chi.Mux 
 
 	dirHandler := handlers.DirHandler{Spaces: spaces}
 	r.Route("/api/dirs", func(r chi.Router) {
-		r.Get("/list/{path}", dirHandler.GetList)
-		r.Get("/tree/{path}", dirHandler.GetTree)
+		r.Get("/list", dirHandler.GetList)
+		r.Get("/tree", dirHandler.GetTree)
 	})
 
 	fileHandler := handlers.FileHandler{Spaces: spaces}
 	r.Route("/api/files", func(r chi.Router) {
-		r.Get("/{path}", fileHandler.Get)
+		r.Get("/", fileHandler.Get)
 		r.Put("/new", fileHandler.PutNew)
-		r.Get("/matches/{path}", fileHandler.Match)
-		r.Get("/stat/{path}", fileHandler.Stat)
+		r.Get("/matches", fileHandler.Match)
+		r.Get("/stat", fileHandler.Stat)
 	})
 
 	spaceHandler := handlers.SpaceHandler{}

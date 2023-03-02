@@ -12,7 +12,6 @@ import (
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
 	"github.com/aigic8/gosyn/api/pb"
-	"github.com/go-chi/chi/v5"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -22,7 +21,7 @@ type FileHandler struct {
 }
 
 func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
-	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	rawPath := strings.TrimSpace(r.URL.Query().Get("path"))
 	if rawPath == "" {
 		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
 		return
@@ -165,9 +164,9 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
-	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	rawPath := strings.TrimSpace(r.URL.Query().Get("pattern"))
 	if rawPath == "" {
-		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
+		utils.WriteAPIErr(w, http.StatusBadRequest, "pattern is required")
 		return
 	}
 
@@ -222,7 +221,7 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 // TODO stating works for dirs too... But the functionality is the same...
 // Should we create a new url like /paths/stat only for stats or accept this thing?
 func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
-	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	rawPath := strings.TrimSpace(r.URL.Query().Get("path"))
 	if rawPath == "" {
 		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
 		return

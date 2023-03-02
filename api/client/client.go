@@ -15,7 +15,7 @@ type GoSynClient struct {
 
 // TODO add test to clients
 func (gc *GoSynClient) GetDirList(baseAPIURL, dirPath, GUID string) ([]*pb.DirChild, error) {
-	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/list/"+dirPath, nil)
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/list?path="+dirPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (gc *GoSynClient) GetDirList(baseAPIURL, dirPath, GUID string) ([]*pb.DirCh
 }
 
 func (gc *GoSynClient) GetDirTree(baseAPIURL, dirPath, GUID string) (map[string]*pb.TreeItem, error) {
-	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/tree/"+dirPath, nil)
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/dirs/tree?path="+dirPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (gc *GoSynClient) GetDirTree(baseAPIURL, dirPath, GUID string) (map[string]
 }
 
 func (gc *GoSynClient) GetFile(baseAPIURL, filePath, GUID string) (io.ReadCloser, error) {
-	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/"+filePath, nil)
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files?path="+filePath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,6 @@ func (gc *GoSynClient) GetFile(baseAPIURL, filePath, GUID string) (io.ReadCloser
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, getErr(res)
@@ -123,8 +122,8 @@ func (gc *GoSynClient) PutNewFile(baseAPIURL, filePath, GUID, srcName string, is
 	return nil
 }
 
-func (gc *GoSynClient) GetMatches(baseAPIURL, GUID, path string) ([]string, error) {
-	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/matches/"+path, nil)
+func (gc *GoSynClient) GetMatches(baseAPIURL, GUID, pattern string) ([]string, error) {
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/matches?pattern="+pattern, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +185,7 @@ func (gc *GoSynClient) GetAllSpaces(baseAPIURL, GUID string) ([]string, error) {
 }
 
 func (gc *GoSynClient) GetStat(baseAPIURL, GUID, statPath string) (*pb.StatInfo, error) {
-	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/stat/"+statPath, nil)
+	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files/stat?path="+statPath, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -154,7 +154,7 @@ func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.ReadCloser, error) 
 		return os.Open(dPath.Path)
 	}
 
-	return gc.GetFile(dPath.Server.BaseAPIURL, dPath.Server.GUID, dPath.Path)
+	return gc.GetFile(dPath.Server.BaseAPIURL, dPath.Path, dPath.Server.GUID)
 }
 
 func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.ReadCloser) error {

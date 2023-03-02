@@ -10,7 +10,6 @@ import (
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
 	"github.com/aigic8/gosyn/api/pb"
-	"github.com/go-chi/chi/v5"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -19,7 +18,7 @@ type DirHandler struct {
 }
 
 func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
-	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	rawPath := strings.TrimSpace(r.URL.Query().Get("path"))
 	if rawPath == "" {
 		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
 		return
@@ -75,7 +74,7 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 // FIXME use something like maxDepth. Since tree can grow without bounds
 func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
-	rawPath := strings.TrimSpace(chi.URLParam(r, "path"))
+	rawPath := strings.TrimSpace(r.URL.Query().Get("path"))
 	if rawPath == "" {
 		utils.WriteAPIErr(w, http.StatusBadRequest, "path is required")
 		return

@@ -11,7 +11,6 @@ import (
 	"github.com/aigic8/gosyn/api/handlers/handlerstest"
 	"github.com/aigic8/gosyn/api/handlers/utils"
 	"github.com/aigic8/gosyn/api/pb"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -65,11 +64,7 @@ func TestDirGetList(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-
-			r := httptest.NewRequest("GET", "/{path}", nil)
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("path", tc.Path)
-			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+			r := httptest.NewRequest("GET", "/?path="+tc.Path, nil)
 
 			uInfo := utils.UserInfo{
 				GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",
@@ -169,11 +164,7 @@ func TestDirGetTree(t *testing.T) {
 
 	for _, tc := range testCases {
 		w := httptest.NewRecorder()
-
-		r := httptest.NewRequest("GET", "/{path}", nil)
-		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("path", tc.Path)
-		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+		r := httptest.NewRequest("GET", "/?path="+tc.Path, nil)
 
 		uInfo := utils.UserInfo{
 			GUID:   "f3b1f1cb-d1e6-4700-8f96-c28182563729",

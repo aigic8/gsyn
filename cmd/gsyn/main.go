@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/aigic8/gosyn/api"
@@ -39,6 +40,7 @@ type (
 )
 
 const DEFAULT_TIMEOUT int64 = 5000
+const DEFAULT_WORKERS int = 10
 
 func main() {
 	var args args
@@ -75,6 +77,7 @@ func main() {
 		if config.Client == nil {
 			errOut("no configuration found for client")
 		}
+
 		if args.Cp.Timeout == 0 {
 			if config.Client.DefaultTimeout != 0 {
 				args.Cp.Timeout = config.Client.DefaultTimeout
@@ -82,6 +85,15 @@ func main() {
 				args.Cp.Timeout = DEFAULT_TIMEOUT
 			}
 		}
+
+		if args.Cp.Workers == 0 {
+			if config.Client.DefaultWorkers != 0 {
+				args.Cp.Workers = config.Client.DefaultWorkers
+			} else {
+				args.Cp.Workers = DEFAULT_WORKERS
+			}
+		}
+
 		CP(args.Cp, serverInfos)
 
 	} else if args.Serve != nil {
@@ -183,14 +195,29 @@ func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 		}
 	}
 
-	// FIXME make multithreaded
 	matches := []*u.DynamicPath{}
-	for _, src := range srcs {
-		srcMatches, err := src.GetMatches(gc)
-		if err != nil {
-			errOut("getting match for '%s': %s", src.String(), err.Error())
+	srcsChann := make(chan *u.DynamicPath, cpArgs.Workers)
+	matchesChann := make(chan *u.DynamicPath, cpArgs.Workers)
+	wg := new(sync.WaitGroup)
+	wg.Add(cpArgs.Workers)
+
+	for i := 0; i < cpArgs.Workers; i++ {
+		go getMatchesAsync(gc, srcsChann, matchesChann, wg)
+	}
+
+	go func() {
+		defer close(matchesChann)
+
+		for _, src := range srcs {
+			srcsChann <- src
 		}
-		matches = append(matches, srcMatches...)
+		close(srcsChann)
+
+		wg.Wait()
+	}()
+
+	for match := range matchesChann {
+		matches = append(matches, match)
 	}
 
 	matchesLen := len(matches)
@@ -211,23 +238,22 @@ func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 		}
 	}
 
-	// FIXME multithreaded
-	for _, match := range matches {
-		reader, err := match.Reader(gc)
-		if err != nil {
-			errOut("getting reader for '%s': %s", match.String(), err)
-		}
+	matchesOutChann := make(chan *u.DynamicPath, cpArgs.Workers)
+	cpWg := new(sync.WaitGroup)
+	cpWg.Add(cpArgs.Workers)
 
-		matchDest := dest
-		if destDirMode {
-			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, Server: dest.Server, Path: path.Join(dest.Path, path.Base(match.Path))}
-		}
-
-		if err = matchDest.Copy(gc, path.Base(match.Path), cpArgs.Force, reader); err != nil {
-			errOut("copying '%s' to '%s': %s", match.String(), matchDest.String(), err)
-		}
+	for i := 0; i < cpArgs.Workers; i++ {
+		go copyAsync(gc, matchesOutChann, dest, destDirMode, cpArgs.Force, cpWg)
 	}
 
+	go func() {
+		defer close(matchesOutChann)
+		for _, match := range matches {
+			matchesOutChann <- match
+		}
+	}()
+
+	cpWg.Wait()
 }
 
 var errPrepend = color.New(color.FgRed).Sprint(" ERROR ")
@@ -290,4 +316,39 @@ func makeTLSConfig(certificatePaths map[string]bool) (*tls.Config, error) {
 	return &tls.Config{
 		RootCAs: certPool,
 	}, nil
+}
+
+func getMatchesAsync(gc *client.GoSynClient, srcs <-chan *u.DynamicPath, out chan<- *u.DynamicPath, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for src := range srcs {
+		matches, err := src.GetMatches(gc)
+		if err != nil {
+			warn("getting match for '%s': %s", src.String(), err.Error())
+		}
+
+		if len(matches) != 0 {
+			for _, match := range matches {
+				out <- match
+			}
+		}
+	}
+}
+
+func copyAsync(gc *client.GoSynClient, matches <-chan *u.DynamicPath, dest *u.DynamicPath, destDirMode bool, force bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for match := range matches {
+		reader, err := match.Reader(gc)
+		if err != nil {
+			errOut("reading '%s': %s", match.String(), err)
+		}
+
+		matchDest := dest
+		if destDirMode {
+			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, Server: dest.Server, Path: path.Join(dest.Path, path.Base(match.Path))}
+		}
+
+		if err = matchDest.Copy(gc, path.Base(match.Path), force, reader); err != nil {
+			errOut("copying '%s' to '%s': %s", match.String(), matchDest.String(), err)
+		}
+	}
 }

@@ -22,6 +22,7 @@ type (
 	ClientConfig struct {
 		Servers        map[string]ClientServerItem `toml:"servers" validate:"required"`
 		DefaultTimeout int64                       `toml:"defaultTimeout" validate:"gte=0"`
+		DefaultWorkers int                         `toml:"defaultWorkers" validate:"gte=0"`
 	}
 
 	ClientServerItem struct {

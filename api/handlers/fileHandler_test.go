@@ -44,6 +44,7 @@ func TestFileGet(t *testing.T) {
 		panic(err)
 	}
 
+	// TODO test Content-Length header
 	// TODO add following test cases:
 	// - file path is for a directory
 	// - file path is out of space

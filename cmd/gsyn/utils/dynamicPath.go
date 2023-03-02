@@ -149,16 +149,24 @@ func isPatternLike(path string) bool {
 	return strings.ContainsRune(path, '?') || strings.ContainsRune(path, '*')
 }
 
-func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.ReadCloser, error) {
+func (dPath *DynamicPath) Reader(gc *client.GoSynClient) (io.ReadCloser, int64, error) {
 	if !dPath.IsRemote {
-		return os.Open(dPath.Path)
+		file, err := os.Open(dPath.Path)
+		if err != nil {
+			return nil, -1, err
+		}
+
+		stat, err := file.Stat()
+		if err != nil {
+			return nil, -1, err
+		}
+		return file, stat.Size(), nil
 	}
 
 	return gc.GetFile(dPath.Server.BaseAPIURL, dPath.Path, dPath.Server.GUID)
 }
 
-func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.ReadCloser) error {
-	defer reader.Close()
+func (dPath *DynamicPath) Copy(gc *client.GoSynClient, srcName string, force bool, reader io.Reader) error {
 	if !dPath.IsRemote {
 		writeDest := dPath.Path
 		writeStat, err := os.Stat(dPath.Path)

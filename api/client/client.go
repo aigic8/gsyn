@@ -74,27 +74,26 @@ func (gc *GoSynClient) GetDirTree(baseAPIURL, dirPath, GUID string) (map[string]
 	return nil, getErr(res)
 }
 
-func (gc *GoSynClient) GetFile(baseAPIURL, filePath, GUID string) (io.ReadCloser, error) {
+func (gc *GoSynClient) GetFile(baseAPIURL, filePath, GUID string) (io.ReadCloser, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, baseAPIURL+"/api/files?path="+filePath, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	req.Header.Set("Authorization", "simple "+GUID)
 
 	res, err := gc.C.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, getErr(res)
+		return nil, 0, getErr(res)
 	}
 
-	return res.Body, nil
+	return res.Body, res.ContentLength, nil
 }
 
-func (gc *GoSynClient) PutNewFile(baseAPIURL, filePath, GUID, srcName string, isForced bool, reader io.ReadCloser) error {
-	defer reader.Close()
+func (gc *GoSynClient) PutNewFile(baseAPIURL, filePath, GUID, srcName string, isForced bool, reader io.Reader) error {
 	req, err := http.NewRequest(http.MethodPut, baseAPIURL+"/api/files/new", reader)
 	if err != nil {
 		return err

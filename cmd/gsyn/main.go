@@ -19,6 +19,7 @@ import (
 	"github.com/alexflint/go-arg"
 	"github.com/fatih/color"
 	"github.com/quic-go/quic-go/http3"
+	"github.com/schollz/progressbar/v3"
 )
 
 type (
@@ -337,18 +338,35 @@ func getMatchesAsync(gc *client.GoSynClient, srcs <-chan *u.DynamicPath, out cha
 func copyAsync(gc *client.GoSynClient, matches <-chan *u.DynamicPath, dest *u.DynamicPath, destDirMode bool, force bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for match := range matches {
-		reader, err := match.Reader(gc)
+		reader, size, err := match.Reader(gc)
 		if err != nil {
 			errOut("reading '%s': %s", match.String(), err)
 		}
+
+		bar := progressbar.NewOptions64(
+			size,
+			progressbar.OptionSetDescription(match.String()),
+			progressbar.OptionSetWriter(os.Stderr),
+			progressbar.OptionShowBytes(true),
+			progressbar.OptionSetWidth(20),
+			progressbar.OptionThrottle(65*time.Millisecond),
+			progressbar.OptionShowCount(),
+			progressbar.OptionOnCompletion(func() {
+				fmt.Fprint(os.Stderr, "\n")
+			}),
+			progressbar.OptionSpinnerType(14),
+			progressbar.OptionSetRenderBlankState(false),
+		)
+		r := io.TeeReader(reader, bar)
 
 		matchDest := dest
 		if destDirMode {
 			matchDest = &u.DynamicPath{IsRemote: dest.IsRemote, Server: dest.Server, Path: path.Join(dest.Path, path.Base(match.Path))}
 		}
 
-		if err = matchDest.Copy(gc, path.Base(match.Path), force, reader); err != nil {
+		if err = matchDest.Copy(gc, path.Base(match.Path), force, r); err != nil {
 			errOut("copying '%s' to '%s': %s", match.String(), matchDest.String(), err)
 		}
+		reader.Close()
 	}
 }

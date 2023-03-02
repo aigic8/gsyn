@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/aigic8/gosyn/api/handlers/utils"
@@ -60,6 +61,8 @@ func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("path '%s' is a directory", filePath))
 		return
 	}
+
+	w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
 
 	io.Copy(w, file)
 }

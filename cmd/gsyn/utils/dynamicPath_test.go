@@ -115,7 +115,7 @@ func TestDynamicPathCopy(t *testing.T) {
 	gc := &client.GoSynClient{C: &http.Client{}}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			reader, err := tc.From.Reader(gc)
+			reader, _, err := tc.From.Reader(gc)
 			if err != nil {
 				panic(err)
 			}

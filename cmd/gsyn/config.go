@@ -25,8 +25,9 @@ type (
 	}
 
 	ClientServerItem struct {
-		GUID    string `toml:"GUID" validate:"required"`
-		Address string `toml:"address" validate:"required,url"`
+		GUID         string   `toml:"GUID" validate:"required"`
+		Address      string   `toml:"address" validate:"required,url"`
+		Certificates []string `toml:"certificates"`
 	}
 
 	ServerConfig struct {

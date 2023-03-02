@@ -21,9 +21,10 @@ type (
 	}
 
 	ServerInfo struct {
-		Name       string
-		BaseAPIURL string
-		GUID       string
+		Name         string
+		BaseAPIURL   string
+		GUID         string
+		Certificates []string
 	}
 )
 

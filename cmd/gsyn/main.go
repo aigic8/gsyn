@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -45,12 +47,14 @@ func main() {
 		errOut("loading configuration: %s", err.Error())
 	}
 
+	// FIXME maybe load all the certificates to memory all at once in init?
 	serverInfos := map[string]*u.ServerInfo{}
 	for serverName, info := range config.Client.Servers {
 		serverInfos[serverName] = &u.ServerInfo{
-			Name:       serverName,
-			BaseAPIURL: info.Address,
-			GUID:       info.GUID,
+			Name:         serverName,
+			BaseAPIURL:   info.Address,
+			GUID:         info.GUID,
+			Certificates: info.Certificates,
 		}
 	}
 
@@ -71,7 +75,6 @@ func main() {
 		if config.Server == nil {
 			errOut("no configuration found for server")
 		}
-		// FIXME bad dependency apiUtils, find a way to resolve
 
 		for _, spacePath := range config.Server.Spaces {
 			if err = validateSpacePath(spacePath); err != nil {
@@ -79,6 +82,7 @@ func main() {
 			}
 		}
 
+		// FIXME bad dependency apiUtils, find a way to resolve
 		users := map[string]apiUtils.UserInfo{}
 		if config.Server.Users == nil || len(config.Server.Users) == 0 {
 			warn("starting server with no users!")
@@ -115,6 +119,7 @@ func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 		errOut("need at least a source and destination path")
 	}
 
+	certs := map[string]bool{}
 	srcs := make([]*u.DynamicPath, 0, pathsLen-1)
 	for _, rawPath := range cpArgs.Paths[:pathsLen-1] {
 		dPath, err := u.NewDynamicPath(rawPath, cwd, servers)
@@ -122,18 +127,32 @@ func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 			errOut("malformed path: %s", err.Error())
 		}
 		srcs = append(srcs, dPath)
+
+		if dPath.IsRemote {
+			for _, cert := range dPath.Server.Certificates {
+				certs[cert] = true
+			}
+		}
 	}
 
 	dest, err := u.NewDynamicPath(cpArgs.Paths[pathsLen-1], cwd, servers)
 	if err != nil {
 		errOut("malformed path: %s", err.Error())
 	}
+	if dest.IsRemote {
+		for _, cert := range dest.Server.Certificates {
+			certs[cert] = true
+		}
+	}
+
+	tlsConfig, err := makeTLSConfig(certs)
+	if err != nil {
+		errOut("configuring TLS: %s", err.Error())
+	}
 
 	c := &http.Client{
-		Timeout: time.Duration(cpArgs.Timeout) * time.Millisecond,
-		Transport: &http3.RoundTripper{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // FIXME
-		},
+		Timeout:   time.Duration(cpArgs.Timeout) * time.Millisecond,
+		Transport: &http3.RoundTripper{TLSClientConfig: tlsConfig},
 	}
 
 	gc := &client.GoSynClient{C: c}
@@ -227,4 +246,35 @@ func validateSpacePath(spacePath string) error {
 	}
 
 	return nil
+}
+
+func makeTLSConfig(certificatePaths map[string]bool) (*tls.Config, error) {
+	if len(certificatePaths) == 0 {
+		return nil, nil
+	}
+
+	certPool := x509.NewCertPool()
+	for certPath := range certificatePaths {
+		certFile, err := os.Open(certPath)
+		if err != nil {
+			return nil, err
+		}
+		defer certFile.Close()
+
+		certBytes, err := io.ReadAll(certFile)
+		if err != nil {
+			return nil, err
+		}
+
+		cert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		certPool.AddCert(cert)
+	}
+
+	return &tls.Config{
+		RootCAs: certPool,
+	}, nil
 }

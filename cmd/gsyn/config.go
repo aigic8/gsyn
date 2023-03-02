@@ -44,12 +44,7 @@ type (
 	}
 )
 
-func LoadConfig() (*Config, error) {
-	configPaths, err := getConfigPaths()
-	if err != nil {
-		return nil, err
-	}
-
+func LoadConfig(configPaths []string) (*Config, error) {
 	configPath := findFirstFile(configPaths)
 	if configPath == "" {
 		configPathsStr := strings.Join(configPaths, "\n")

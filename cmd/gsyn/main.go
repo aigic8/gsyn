@@ -33,7 +33,9 @@ type (
 		Timeout int64    `arg:"-t,--timeout"`
 	}
 
-	serveArgs struct{}
+	serveArgs struct {
+		Config string `arg:"-c,--config"`
+	}
 )
 
 const DEFAULT_TIMEOUT int64 = 5000
@@ -42,7 +44,18 @@ func main() {
 	var args args
 	arg.MustParse(&args)
 
-	config, err := LoadConfig()
+	var configPaths []string
+	var err error
+	if args.Serve != nil && args.Serve.Config != "" {
+		configPaths = []string{args.Serve.Config}
+	} else {
+		configPaths, err = getConfigPaths()
+		if err != nil {
+			errOut("getting configuration paths: %s", err.Error())
+		}
+	}
+
+	config, err := LoadConfig(configPaths)
 	if err != nil {
 		errOut("loading configuration: %s", err.Error())
 	}

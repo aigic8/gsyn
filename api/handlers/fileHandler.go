@@ -242,6 +242,10 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if len(matchedFiles) == 0 {
+		utils.WriteAPIErr(w, http.StatusNotFound, "no matches found")
+	}
+
 	resp := pb.FileGetMatchResponse{
 		Matches: matchedFiles,
 	}

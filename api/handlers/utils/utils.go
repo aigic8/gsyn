@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/aigic8/gosyn/api/pb"
@@ -117,4 +118,18 @@ func WriteAPIErr(w http.ResponseWriter, status int, message string) error {
 	}
 
 	return nil
+}
+
+func IsSubPath(basePath, subPath string) (bool, error) {
+	// based on https://stackoverflow.com/a/62529061
+	up := ".." + string(os.PathSeparator)
+
+	rel, err := filepath.Rel(basePath, subPath)
+	if err != nil {
+		return false, err
+	}
+	if !strings.HasPrefix(rel, up) && rel != ".." {
+		return true, nil
+	}
+	return false, nil
 }

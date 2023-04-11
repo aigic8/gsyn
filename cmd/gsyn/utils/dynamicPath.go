@@ -32,7 +32,7 @@ func NewDynamicPath(rawPath string, base string, servers map[string]*ServerInfo)
 	pathParts := strings.Split(rawPath, ":")
 	pathPartsLen := len(pathParts)
 	if pathPartsLen > 2 {
-		return nil, errors.New("more than one collon")
+		return nil, errors.New("more than one colon")
 	}
 
 	if pathPartsLen == 1 {

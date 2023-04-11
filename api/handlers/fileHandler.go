@@ -36,7 +36,18 @@ func (h FileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
+		return
+	}
+
+	isSubPath, err := utils.IsSubPath(h.Spaces[spaceName], filePath)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if !isSubPath {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -95,7 +106,18 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
+		return
+	}
+
+	isSubPath, err := utils.IsSubPath(h.Spaces[spaceName], destPath)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if !isSubPath {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -181,7 +203,7 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
 		return
 	}
 
@@ -193,7 +215,19 @@ func (h FileHandler) Match(w http.ResponseWriter, r *http.Request) {
 	}
 
 	matchedFiles := []string{}
+	spacePath := h.Spaces[spaceName]
 	for _, matchedPath := range matchedPaths {
+		isSubPath, err := utils.IsSubPath(spacePath, matchedPath)
+		if err != nil {
+			utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+
+		if !isSubPath {
+			utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+
 		stat, err := os.Stat(matchedPath)
 		// FIXME maybe only not return paths with error instead of returning internal server error?
 		if err != nil {
@@ -238,7 +272,18 @@ func (h FileHandler) Stat(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
+		return
+	}
+
+	isSubPath, err := utils.IsSubPath(h.Spaces[spaceName], filePath)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if !isSubPath {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 

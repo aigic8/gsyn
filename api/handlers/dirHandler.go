@@ -32,7 +32,18 @@ func (h DirHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
+		return
+	}
+
+	isSubPath, err := utils.IsSubPath(h.Spaces[spaceName], dirPath)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if !isSubPath {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -88,7 +99,18 @@ func (h DirHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 
 	uInfo := r.Context().Value(utils.UserContextKey).(*utils.UserInfo)
 	if _, ok := uInfo.Spaces[spaceName]; !ok {
-		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthrized to access space")
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized to access space")
+		return
+	}
+
+	isSubPath, err := utils.IsSubPath(h.Spaces[spaceName], dirPath)
+	if err != nil {
+		utils.WriteAPIErr(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if !isSubPath {
+		utils.WriteAPIErr(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 

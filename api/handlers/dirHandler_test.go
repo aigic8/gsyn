@@ -45,7 +45,7 @@ func TestDirGetList(t *testing.T) {
 		{Name: "truth.txt", IsDir: false},
 	}
 
-	// TODO add test caeses:
+	// TODO add test cases:
 	// - path is a file
 	// - path does not exist
 	// - path is out of space
@@ -146,7 +146,7 @@ func TestDirGetTree(t *testing.T) {
 		},
 	}
 
-	// TODO add test caeses:
+	// TODO add test cases:
 	// - path is a file
 	// - path does not exist
 	// - path is out of space

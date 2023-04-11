@@ -93,8 +93,8 @@ func (h FileHandler) PutNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.ContainsRune(srcName, '/') {
-		utils.WriteAPIErr(w, http.StatusBadRequest, "source name can not contain '/'")
+	if strings.ContainsRune(srcName, os.PathListSeparator) {
+		utils.WriteAPIErr(w, http.StatusBadRequest, fmt.Sprintf("source name can not contain '%s'", string(os.PathSeparator)))
 		return
 	}
 

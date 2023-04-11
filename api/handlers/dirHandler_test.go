@@ -27,6 +27,7 @@ func TestDirGetList(t *testing.T) {
 
 	err := handlerstest.MakeDirs(base, []string{
 		"space/seethers/special",
+		"outsider",
 	})
 	if err != nil {
 		panic(err)
@@ -48,10 +49,10 @@ func TestDirGetList(t *testing.T) {
 	// TODO add test cases:
 	// - path is a file
 	// - path does not exist
-	// - path is out of space
 	// - user is unauthorized
 	testCases := []getDirListTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Resp: normalResp},
+		{Name: "pathTraversal", Status: http.StatusUnauthorized, Path: "seethers/../../outsider"},
 	}
 
 	spaces := map[string]string{
@@ -110,6 +111,7 @@ func TestDirGetTree(t *testing.T) {
 
 	err := handlerstest.MakeDirs(base, []string{
 		"space/seethers/special",
+		"outsider",
 	})
 	if err != nil {
 		panic(err)
@@ -149,10 +151,10 @@ func TestDirGetTree(t *testing.T) {
 	// TODO add test cases:
 	// - path is a file
 	// - path does not exist
-	// - path is out of space
 	// - user is unauthorized
 	testCases := []getDirTreeTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Tree: normalTree},
+		{Name: "pathTraversal", Status: http.StatusUnauthorized, Path: "seethers/../../outsider"},
 	}
 
 	spaces := map[string]string{

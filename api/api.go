@@ -19,6 +19,14 @@ func Router(spaces map[string]string, users map[string]utils.UserInfo) *chi.Mux 
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.Recoverer)
 
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		utils.WriteAPIErr(w, http.StatusNotFound, "not found")
+	})
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		utils.WriteAPIErr(w, http.StatusNotFound, "method not allowed")
+	})
+
 	r.Use(utils.UserAuthMiddleware(users))
 
 	dirHandler := handlers.DirHandler{Spaces: spaces}

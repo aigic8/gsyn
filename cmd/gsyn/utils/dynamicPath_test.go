@@ -13,8 +13,8 @@ import (
 type newDynamicPathTestCase struct {
 	Name        string
 	PathStr     string
-	ErrExpteced bool
-	Exptcted    *DynamicPath
+	ErrExpected bool
+	Expected    *DynamicPath
 }
 
 func TestNewDynamicPath(t *testing.T) {
@@ -57,22 +57,22 @@ func TestNewDynamicPath(t *testing.T) {
 	}
 
 	testCases := []newDynamicPathTestCase{
-		{Name: "local", PathStr: "/home/projects/gsyn", ErrExpteced: false, Exptcted: localDP},
-		{Name: "localRelative", PathStr: "home/projects/gsyn", ErrExpteced: false, Exptcted: localRelativeDP},
-		{Name: "remote", PathStr: "myserver:home/projects", ErrExpteced: false, Exptcted: remoteDP},
-		{Name: "multiColons", PathStr: "myserver:yourserver:our/server", ErrExpteced: true},
-		{Name: "serverDoesNotExist", PathStr: "noserver:my/path", ErrExpteced: true},
-		{Name: "emptyPath", PathStr: "myserver:", ErrExpteced: true},
+		{Name: "local", PathStr: "/home/projects/gsyn", ErrExpected: false, Expected: localDP},
+		{Name: "localRelative", PathStr: "home/projects/gsyn", ErrExpected: false, Expected: localRelativeDP},
+		{Name: "remote", PathStr: "myserver:home/projects", ErrExpected: false, Expected: remoteDP},
+		{Name: "multiColons", PathStr: "myserver:yourserver:our/server", ErrExpected: true},
+		{Name: "serverDoesNotExist", PathStr: "noserver:my/path", ErrExpected: true},
+		{Name: "emptyPath", PathStr: "myserver:", ErrExpected: true},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			dPath, err := NewDynamicPath(tc.PathStr, cwd, servers)
-			if tc.ErrExpteced {
+			if tc.ErrExpected {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, dPath, tc.Exptcted)
+				assert.Equal(t, dPath, tc.Expected)
 			}
 		})
 	}
@@ -82,7 +82,7 @@ type dynamicPathCopyTestCase struct {
 	Name          string
 	From          *DynamicPath
 	To            *DynamicPath
-	ErrExptected  bool
+	ErrExpected   bool
 	ExpectedFiles []string
 }
 
@@ -106,10 +106,10 @@ func TestDynamicPathCopy(t *testing.T) {
 	normalFiles := []string{path.Join(base, "app2.txt")}
 	toDirFiles := []string{path.Join(base, "dist/app.txt")}
 	testCases := []dynamicPathCopyTestCase{
-		{Name: "normal", From: appPath, To: newLocalDP("app2.txt", base), ErrExptected: false, ExpectedFiles: normalFiles},
-		{Name: "toDir", From: appPath, To: newLocalDP("dist", base), ErrExptected: false, ExpectedFiles: toDirFiles},
-		{Name: "toDirDoesNotExist", From: appPath, To: newLocalDP("nowhere/app.txt", base), ErrExptected: true},
-		{Name: "toAlreadyFile", From: appPath, To: newLocalDP("dist/exist.txt", base), ErrExptected: true},
+		{Name: "normal", From: appPath, To: newLocalDP("app2.txt", base), ErrExpected: false, ExpectedFiles: normalFiles},
+		{Name: "toDir", From: appPath, To: newLocalDP("dist", base), ErrExpected: false, ExpectedFiles: toDirFiles},
+		{Name: "toDirDoesNotExist", From: appPath, To: newLocalDP("nowhere/app.txt", base), ErrExpected: true},
+		{Name: "toAlreadyFile", From: appPath, To: newLocalDP("dist/exist.txt", base), ErrExpected: true},
 	}
 
 	gc := &client.GoSynClient{C: &http.Client{}}
@@ -121,7 +121,7 @@ func TestDynamicPathCopy(t *testing.T) {
 			}
 
 			err = tc.To.Copy(gc, path.Base(tc.From.Path), false, reader)
-			if tc.ErrExptected {
+			if tc.ErrExpected {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)

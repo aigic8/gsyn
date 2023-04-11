@@ -27,6 +27,7 @@ func TestDirGetList(t *testing.T) {
 
 	err := handlerstest.MakeDirs(base, []string{
 		"space/seethers/special",
+		"space/pink-floyd",
 		"outsider",
 	})
 	if err != nil {
@@ -46,17 +47,17 @@ func TestDirGetList(t *testing.T) {
 		{Name: "truth.txt", IsDir: false},
 	}
 
-	// TODO add test cases:
-	// - path is a file
-	// - path does not exist
-	// - user is unauthorized
 	testCases := []getDirListTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Resp: normalResp},
+		{Name: "pathIsFile", Status: http.StatusBadRequest, Path: "seethers/truth.txt"},
+		{Name: "pathDoesNotExist", Status: http.StatusNotFound, Path: "seethers/notExist"},
+		{Name: "unauthorizedSpace", Status: http.StatusUnauthorized, Path: "pink-floyd"},
 		{Name: "pathTraversal", Status: http.StatusUnauthorized, Path: "seethers/../../outsider"},
 	}
 
 	spaces := map[string]string{
-		"seethers": path.Join(base, "space/seethers"),
+		"seethers":   path.Join(base, "space/seethers"),
+		"pink-floyd": path.Join(base, "space/pink-floyd"),
 	}
 	dirHandler := DirHandler{Spaces: spaces}
 
@@ -111,6 +112,7 @@ func TestDirGetTree(t *testing.T) {
 
 	err := handlerstest.MakeDirs(base, []string{
 		"space/seethers/special",
+		"space/pink-floyd",
 		"outsider",
 	})
 	if err != nil {
@@ -148,17 +150,17 @@ func TestDirGetTree(t *testing.T) {
 		},
 	}
 
-	// TODO add test cases:
-	// - path is a file
-	// - path does not exist
-	// - user is unauthorized
 	testCases := []getDirTreeTestCase{
 		{Name: "normal", Status: http.StatusOK, Path: "seethers", Tree: normalTree},
+		{Name: "isFile", Status: http.StatusBadRequest, Path: "seethers/truth.txt"},
+		{Name: "notExist", Status: http.StatusNotFound, Path: "seethers/old"},
+		{Name: "unauthorizedSpace", Status: http.StatusUnauthorized, Path: "pink-floyd"},
 		{Name: "pathTraversal", Status: http.StatusUnauthorized, Path: "seethers/../../outsider"},
 	}
 
 	spaces := map[string]string{
-		"seethers": path.Join(base, "space/seethers"),
+		"seethers":   path.Join(base, "space/seethers"),
+		"pink-floyd": path.Join(base, "space/pink-floyd"),
 	}
 	dirHandler := DirHandler{Spaces: spaces}
 

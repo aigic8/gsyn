@@ -65,12 +65,14 @@ func main() {
 
 	// FIXME maybe load all the certificates to memory all at once in init?
 	serverInfos := map[string]*u.ServerInfo{}
-	for serverName, info := range config.Client.Servers {
-		serverInfos[serverName] = &u.ServerInfo{
-			Name:         serverName,
-			BaseAPIURL:   info.Address,
-			GUID:         info.GUID,
-			Certificates: info.Certificates,
+	if config.Client != nil {
+		for serverName, info := range config.Client.Servers {
+			serverInfos[serverName] = &u.ServerInfo{
+				Name:         serverName,
+				BaseAPIURL:   info.Address,
+				GUID:         info.GUID,
+				Certificates: info.Certificates,
+			}
 		}
 	}
 

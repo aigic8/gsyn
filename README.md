@@ -53,7 +53,7 @@ Gsyn uses [TOML](https://toml.io/en/) as config language.
 ```toml
 # Client Part
 [client]
-defaultTimeout = 5000 # optional, default time out in milliseconds, default is 5000
+defaultTimeout = 5000 # optional, default timeout in milliseconds, default is 5000
 defaultWorkers = 10 # optional, default golang workers to be used, default is 10
 
 [client.servers.us]
@@ -82,7 +82,7 @@ movies = "/home/user/spaces/movies"
 Config file consists of two parts `client` and `server`. You only need to write the part you are using. `client` is used when you are using gsyn as client (for example with `cp` command) and `server` is used when you are running on server (for example with `serve` command)
 
 ### Generating Certificates
-If you are using Gsyn with a valid domain, you can use [CertBot](https://certbot.eff.org/) or [acme.sh](acme.sh) to generate a trusted certificate. An you **only need to pass that to your server configuration.**
+If you are using Gsyn with a valid domain, you can use [CertBot](https://certbot.eff.org/) or [acme.sh](acme.sh) to generate a trusted certificate. You **only need to pass that to your server configuration.**
 
 But if you are using your server IP address, you need to generate a self signed certificate for your ip address and **pass that to both client and server.** (You can technically generate a trusted certificate for an IP address, but I could not find any free ways)
 You can generate a self signed certificate using openssl:

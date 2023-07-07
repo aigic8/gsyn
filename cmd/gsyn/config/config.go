@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"errors"
@@ -75,7 +75,7 @@ func LoadConfig(configPaths []string) (*Config, error) {
 	return &config, nil
 }
 
-func getConfigPaths() ([]string, error) {
+func GetConfigPaths() ([]string, error) {
 	OS := runtime.GOOS
 
 	if OS == "linux" || OS == "darwin" {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/aigic8/gosyn/api"
 	"github.com/aigic8/gosyn/api/client"
 	apiUtils "github.com/aigic8/gosyn/api/handlers/utils"
+	"github.com/aigic8/gosyn/cmd/gsyn/config"
 	u "github.com/aigic8/gosyn/cmd/gsyn/utils"
 	"github.com/alexflint/go-arg"
 	"github.com/fatih/color"
@@ -29,6 +31,7 @@ type (
 	}
 
 	cpArgs struct {
+		Config  string   `arg:"-c,--config"`
 		Force   bool     `arg:"-f"`
 		Workers int      `arg:"-w,--workers"`
 		Paths   []string `arg:"positional"`
@@ -46,19 +49,22 @@ const DEFAULT_WORKERS int = 10
 func main() {
 	var args args
 	arg.MustParse(&args)
+	go signalHandler()
 
 	var configPaths []string
 	var err error
 	if args.Serve != nil && args.Serve.Config != "" {
 		configPaths = []string{args.Serve.Config}
+	} else if args.Cp != nil && args.Cp.Config != "" {
+		configPaths = []string{args.Cp.Config}
 	} else {
-		configPaths, err = getConfigPaths()
+		configPaths, err = config.GetConfigPaths()
 		if err != nil {
 			errOut("getting configuration paths: %s", err.Error())
 		}
 	}
 
-	config, err := LoadConfig(configPaths)
+	config, err := config.LoadConfig(configPaths)
 	if err != nil {
 		errOut("loading configuration: %s", err.Error())
 	}
@@ -136,6 +142,17 @@ func main() {
 
 }
 
+func signalHandler() {
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel)
+	for {
+		s := <-signalChannel
+		if s == os.Interrupt || s == os.Kill {
+			os.Exit(0)
+		}
+	}
+}
+
 func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -185,7 +202,7 @@ func CP(cpArgs *cpArgs, servers map[string]*u.ServerInfo) {
 
 	gc := &client.GoSynClient{C: c}
 
-	// destDirMode is when we destinition MUST BE a directory to copy files to (when we have multiple sources or matches)
+	// destDirMode is when we destination MUST BE a directory to copy files to (when we have multiple sources or matches)
 	destDirMode := len(srcs) > 1
 	if destDirMode {
 		stat, err := dest.Stat(gc)

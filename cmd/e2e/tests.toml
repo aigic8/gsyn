@@ -1,0 +1,52 @@
+users = [
+  { name = "u1", UUID = "e9003830-f596-4229-bb23-c5636837cbbe", servers = [
+    "server",
+  ] },
+]
+servers = [
+  { name = "s1", address = "https://localhost:8080", users = [
+    { name = "u1", spaces = [
+      "space",
+    ] },
+  ] },
+]
+spaces = { space = "$TMP/space" }
+
+[cert]
+key = "./key.pem"
+pem = "./cert.pem"
+der = "./cert.der"
+
+[[tests]]
+name = "clientToServerBasic"
+user = "u1"
+server = "s1"
+makeFiles = ["$TMP/test.txt"]
+commands = ["cp $TMP/test.txt s1:space/test.txt"]
+expectFiles = ["$TMP/space/test.txt"]
+expectDirs = []
+expectError = false
+makeSpacesDirs = true
+
+[[tests]]
+name = "serverToClientBasic"
+user = "u1"
+server = "s1"
+makeFiles = ["$TMP/space/test.txt"]
+commands = ["cp s1:space/test.txt $TMP/test.txt"]
+expectFiles = ["$TMP/test.txt"]
+expectDirs = []
+expectError = false
+makeSpacesDirs = true
+
+[[tests]]
+name = "serverToClientPattern"
+user = "u1"
+server = "s1"
+makeFiles = ["$TMP/space/test1.txt", "$TMP/space/test2.txt", "$TMP/space/no.txt"]
+commands = ["cp s1:space/test*.txt $TMP"]
+expectFiles = ["$TMP/test1.txt", "$TMP/test2.txt"]
+expectDirs = []
+expectError = false
+makeSpacesDirs = true
+

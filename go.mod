@@ -29,7 +29,7 @@ require (
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
 	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
@@ -38,7 +38,7 @@ require (
 
 require (
 	github.com/alexflint/go-arg v1.4.3
-	github.com/fatih/color v1.14.1
+	github.com/fatih/color v1.15.0
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/pelletier/go-toml/v2 v2.0.6
 	github.com/quic-go/quic-go v0.33.0

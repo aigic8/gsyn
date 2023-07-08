@@ -2,9 +2,12 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 func IsPathDir(path string) error {
@@ -47,4 +50,21 @@ func (c Client) Run(command string) error {
 		return errors.New(string(output))
 	}
 	return nil
+}
+
+type TestLog struct {
+	TestName string
+}
+
+var bold = color.New(color.Bold)
+
+func (t TestLog) Success() {
+	bold.Printf("- " + t.TestName)
+	color.Green(" SUCCESS\n")
+}
+
+func (t TestLog) Fail(format string, args ...any) {
+	bold.Printf("- " + t.TestName)
+	color.Red(" FAILED")
+	fmt.Printf(" - "+format+"\n", args)
 }

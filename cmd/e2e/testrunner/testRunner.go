@@ -55,15 +55,16 @@ func NewTestRunner(testsData *utils.TestFileData) (*TestRunner, error) {
 }
 
 func (tr *TestRunner) Run(test *utils.TestFileTestData) {
+	l := utils.TestLog{TestName: test.Name}
 	user, userExists := tr.users[test.User]
 	if !userExists {
-		fmt.Fprintf(os.Stderr, "%s: FAILD - error: user with name '%s' does not exist\n", test.Name, test.User)
+		l.Fail("error: user with name '%s' does not exist", test.User)
 		return
 	}
 
 	server, serverExists := tr.servers[test.Server]
 	if !serverExists {
-		fmt.Fprintf(os.Stderr, "%s: FAILED - error: server with name '%s' does not exist\n", test.Name, test.Server)
+		l.Fail("error: server with name '%s' does not exist", test.Server)
 		return
 	}
 
@@ -72,14 +73,14 @@ func (tr *TestRunner) Run(test *utils.TestFileTestData) {
 		defer cleanPaths(mapValues(spaces)...)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: FAILED - error: making spaces: %v\n", test.Name, err)
+		l.Fail("error: making spaces: %v", err)
 		return
 	}
 
 	madeFiles, err := tr.makeFiles(test.MakeFiles)
 	defer cleanPaths(madeFiles...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: FAILED - error: making files: %v\n", test.Name, err)
+		l.Fail("error: making files: %v", err)
 		return
 	}
 
@@ -98,12 +99,11 @@ func (tr *TestRunner) Run(test *utils.TestFileTestData) {
 		CertDer:    path.Join(tr.cwd, tr.cert.Der),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: FAILED: error: generating config files: %v\n", test.Name, err)
+		l.Fail("error: generating config files: %v", err)
 		return
 	}
 	defer func() {
 		if err := configInfo.Clean(); err != nil {
-			// TODO: write a wrapper around fmt.Fprintf for errors
 			fmt.Fprintf(os.Stderr, "%s: error: cleaning config files: %v\n", test.Name, err)
 		}
 	}()
@@ -121,22 +121,21 @@ func (tr *TestRunner) Run(test *utils.TestFileTestData) {
 	err = tr.runClientCommands(configInfo.ClientConfigPath, test.Commands)
 	if err != nil {
 		if !test.ExpectError {
-			fmt.Fprintf(os.Stderr, "%s: FAILED - error: running command: %v\n", test.Name, err)
+			l.Fail("error: running command: %v", err)
 		} else {
-			fmt.Fprintf(os.Stderr, "%s: SUCCESS\n", test.Name)
+			l.Success()
 		}
 		return
 	}
 	if test.ExpectError {
-		// TODO: replace Fprintf with Printf in the right context
-		fmt.Fprintf(os.Stderr, "%s: FAILED: error: expected errors\n", test.Name)
+		l.Fail("error: expected errors but none happened")
 		return
 	}
 
 	expectedFiles, err := tr.checkExpectedFiles(test.ExpectFiles)
 	defer cleanPaths(expectedFiles...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: FAILED - %v\n", test.Name, err)
+		l.Fail("error: %v", err)
 		return
 	}
 
@@ -144,11 +143,11 @@ func (tr *TestRunner) Run(test *utils.TestFileTestData) {
 	expectedDirs, err := tr.checkExpectedDirs(test.ExpectDirs)
 	defer cleanPaths(expectedDirs...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: FAILED - %v\n", test.Name, err)
+		l.Fail("error: %v", err)
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "%s: SUCCESS\n", test.Name)
+	l.Success()
 }
 
 // returns server spaces map replacing the variables like $TMP, also create their directory if makeSpacesDir is true. Don't forget to defer cleanPaths if you set makeSpacesDir true.
